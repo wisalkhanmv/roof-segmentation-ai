@@ -79,37 +79,61 @@ st.markdown("""
 def load_trained_model():
     """Load the trained model (cached for performance)"""
     try:
-        # Use the best trained model
+        # Check if model is already loaded in session state
+        if 'trained_model' in st.session_state and st.session_state.trained_model is not None:
+            return st.session_state.trained_model, "Loaded from Session"
+        
+        # Try to load from local checkpoints first
         current_dir = Path(__file__).parent
         best_checkpoint = current_dir / "checkpoints" / "best_model.ckpt"
 
-        # If model doesn't exist locally, try to download it
-        if not best_checkpoint.exists():
-            st.info("📥 Model file not found locally. Attempting to download...")
-            
-            # Create checkpoints directory if it doesn't exist
-            best_checkpoint.parent.mkdir(exist_ok=True)
-            
-            # Try to download from GitHub (you can replace this URL with your actual model URL)
-            model_url = "https://github.com/wisalkhanmv/roof-segmentation-ai/releases/download/v1.0/best_model.ckpt"
-            
-            try:
-                import requests
-                response = requests.get(model_url, stream=True)
-                response.raise_for_status()
-                
-                with open(best_checkpoint, 'wb') as f:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        f.write(chunk)
-                
-                st.success("✅ Model downloaded successfully!")
-                
-            except Exception as download_error:
-                st.warning("⚠️ Could not download model. Using demo mode with synthetic predictions.")
-                st.info("📝 To use real AI predictions, please add your trained model file to the 'checkpoints' folder.")
-                return None, "Demo Mode"
+        if best_checkpoint.exists():
+            # Load model
+            model_config = {
+                'model_name': 'unet',
+                'backbone': 'resnet34',
+                'classes': 1,
+                'encoder_weights': 'imagenet'
+            }
+            model = create_model(model_config)
 
-        # Load model
+            # Load checkpoint
+            try:
+                checkpoint = torch.load(
+                    best_checkpoint, map_location='cpu', weights_only=False)
+            except:
+                checkpoint = torch.load(best_checkpoint, map_location='cpu')
+
+            if 'state_dict' in checkpoint:
+                state_dict = checkpoint['state_dict']
+                new_state_dict = {}
+                for key, value in state_dict.items():
+                    if key.startswith('model.'):
+                        new_key = key[6:]
+                        new_state_dict[new_key] = value
+                    else:
+                        new_state_dict[key] = value
+                model.load_state_dict(new_state_dict)
+            else:
+                model.load_state_dict(checkpoint)
+
+            model.eval()
+            st.session_state.trained_model = model
+            return model, "Local Model"
+
+        # If no local model, return None for demo mode
+        return None, "Demo Mode"
+
+    except Exception as e:
+        st.error(f"Error loading model: {e}")
+        st.info("📝 Using demo mode with synthetic predictions.")
+        return None, "Demo Mode"
+
+
+def load_model_from_upload(uploaded_file):
+    """Load model from uploaded file"""
+    try:
+        # Load model architecture
         model_config = {
             'model_name': 'unet',
             'backbone': 'resnet34',
@@ -118,12 +142,8 @@ def load_trained_model():
         }
         model = create_model(model_config)
 
-        # Load checkpoint
-        try:
-            checkpoint = torch.load(
-                best_checkpoint, map_location='cpu', weights_only=False)
-        except:
-            checkpoint = torch.load(best_checkpoint, map_location='cpu')
+        # Load checkpoint from uploaded file
+        checkpoint = torch.load(uploaded_file, map_location='cpu')
 
         if 'state_dict' in checkpoint:
             state_dict = checkpoint['state_dict']
@@ -139,12 +159,12 @@ def load_trained_model():
             model.load_state_dict(checkpoint)
 
         model.eval()
-        return model, best_checkpoint.name
+        st.session_state.trained_model = model
+        return model, True
 
     except Exception as e:
-        st.error(f"Error loading model: {e}")
-        st.info("📝 Using demo mode with synthetic predictions.")
-        return None, "Demo Mode"
+        st.error(f"Error loading uploaded model: {e}")
+        return None, False
 
 
 def process_csv_data(uploaded_file):
@@ -294,18 +314,51 @@ def main():
     # Sidebar
     st.sidebar.title("🔧 Configuration")
 
-    # Load model
-    with st.spinner("Loading AI model..."):
-        model, checkpoint_name = load_trained_model()
-
-    if model is None and checkpoint_name != "Demo Mode":
-        st.error("❌ Failed to load AI model. Please check the model files.")
-        return
-
-    if checkpoint_name == "Demo Mode":
-        st.sidebar.warning(f"⚠️ {checkpoint_name}")
+    # Model upload section
+    st.sidebar.markdown("### 🤖 AI Model")
+    
+    # Check if model is already loaded
+    if 'trained_model' in st.session_state and st.session_state.trained_model is not None:
+        st.sidebar.success("✅ Model loaded from session")
+        model = st.session_state.trained_model
+        checkpoint_name = "Session Model"
     else:
-        st.sidebar.success(f"✅ Model loaded: {checkpoint_name}")
+        # Load model
+        with st.spinner("Loading AI model..."):
+            model, checkpoint_name = load_trained_model()
+
+        if model is None and checkpoint_name != "Demo Mode":
+            st.sidebar.error("❌ Failed to load AI model.")
+            st.sidebar.info("📝 Please upload your trained model file below.")
+        elif checkpoint_name == "Demo Mode":
+            st.sidebar.warning(f"⚠️ {checkpoint_name}")
+            st.sidebar.info("📝 Upload your trained model for real AI predictions.")
+        else:
+            st.sidebar.success(f"✅ Model loaded: {checkpoint_name}")
+
+    # Model upload section
+    st.sidebar.markdown("### 📤 Upload Model")
+    st.sidebar.markdown("Upload your trained model file (.ckpt) for real AI predictions:")
+    
+    uploaded_model = st.sidebar.file_uploader(
+        "Choose model file",
+        type=['ckpt'],
+        help="Upload your trained PyTorch Lightning checkpoint file",
+        key="model_uploader"
+    )
+    
+    if uploaded_model is not None:
+        with st.spinner("Loading uploaded model..."):
+            new_model, success = load_model_from_upload(uploaded_model)
+            if success:
+                st.sidebar.success("✅ Model uploaded and loaded successfully!")
+                model = new_model
+                checkpoint_name = "Uploaded Model"
+            else:
+                st.sidebar.error("❌ Failed to load uploaded model.")
+                if model is None:
+                    model = None
+                    checkpoint_name = "Demo Mode"
 
     # Model info
     st.sidebar.markdown("### Model Information")
@@ -314,6 +367,36 @@ def main():
     st.sidebar.markdown(f"**Best Loss**: -5.5004")
 
     # Main content
+    st.markdown("---")
+
+    # Model status and instructions
+    if model is None or checkpoint_name == "Demo Mode":
+        st.warning("⚠️ **Demo Mode Active**")
+        st.markdown("""
+        **Current Status**: The app is running in demo mode with synthetic predictions.
+        
+        **To enable real AI predictions:**
+        1. Go to the sidebar on the left
+        2. Under "📤 Upload Model", click "Choose model file"
+        3. Upload your trained PyTorch Lightning checkpoint file (.ckpt)
+        4. The app will automatically load your model and switch to AI mode
+        
+        **Demo Mode Features:**
+        - ✅ Process CSV files with addresses
+        - ✅ Generate synthetic roof area predictions
+        - ✅ Download results with predictions
+        - ⚠️ Predictions are simulated (not real AI)
+        """)
+    else:
+        st.success("✅ **AI Mode Active**")
+        st.markdown(f"""
+        **Current Status**: Real AI model loaded successfully!
+        
+        **Model**: {checkpoint_name}
+        **Architecture**: UNet + ResNet34
+        **Ready for**: Real AI predictions on your data
+        """)
+
     st.markdown("---")
 
     # File upload section
