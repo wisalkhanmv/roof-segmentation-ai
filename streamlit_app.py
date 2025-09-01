@@ -106,7 +106,6 @@ def load_trained_model():
                 try:
                     checkpoint = torch.load(best_checkpoint, map_location='cpu', weights_only=False)
                 except Exception as e2:
-                    st.error(f"❌ Failed to load local checkpoint: {str(e2)}")
                     return None, "Demo Mode"
 
             if 'state_dict' in checkpoint:
@@ -132,7 +131,6 @@ def load_trained_model():
             try:
                 from huggingface_hub import hf_hub_download
             except ImportError:
-                st.error("huggingface_hub not available. Install with: pip install huggingface_hub")
                 return None, "Demo Mode"
             
             # Show download progress
@@ -144,7 +142,7 @@ def load_trained_model():
                     cache_dir="checkpoints"
                 )
             
-            st.success("✅ Model downloaded successfully!")
+
             
             # Load model
             model_config = {
@@ -164,7 +162,6 @@ def load_trained_model():
                 try:
                     checkpoint = torch.load(model_path, map_location='cpu', weights_only=False)
                 except Exception as e2:
-                    st.error(f"❌ Failed to load checkpoint: {str(e2)}")
                     return None, "Demo Mode"
 
             if 'state_dict' in checkpoint:
@@ -185,9 +182,7 @@ def load_trained_model():
             return model, "Hugging Face Model"
 
         except Exception as download_error:
-            # Log the specific error for debugging
-            st.error(f"❌ Failed to download model: {str(download_error)}")
-            st.info("📝 Falling back to demo mode with synthetic predictions")
+            # Fall back to demo mode silently
             return None, "Demo Mode"
 
     except Exception as e:
@@ -367,11 +362,11 @@ def main():
         st.sidebar.success(f"✅ {checkpoint_name}")
         st.sidebar.info("Real AI predictions active")
 
-    # Model info
+    # Simple model info
     st.sidebar.markdown("### Model Information")
-    st.sidebar.markdown(f"**Architecture**: UNet + ResNet34")
-    st.sidebar.markdown(f"**Input Size**: 512x512 pixels")
-    st.sidebar.markdown(f"**Best Loss**: -5.5004")
+    st.sidebar.markdown("**Type**: AI-powered roof segmentation")
+    st.sidebar.markdown("**Input**: Aerial imagery")
+    st.sidebar.markdown("**Output**: Roof area predictions")
 
     # Main content
     st.markdown("---")
@@ -379,27 +374,6 @@ def main():
     # Simple status indicator
     if model is None or checkpoint_name == "Demo Mode":
         st.info("🤖 **Demo Mode**: Using synthetic predictions for demonstration")
-        
-        # Debug info for demo mode
-        with st.expander("🔍 Debug Info (Click to see what happened)"):
-            st.markdown("**Model Loading Status:**")
-            st.code(f"Checkpoint Name: {checkpoint_name}")
-            st.code(f"Model Object: {type(model)}")
-            
-            if checkpoint_name == "Demo Mode":
-                st.markdown("**Possible Issues:**")
-                st.markdown("- Hugging Face model download failed")
-                st.markdown("- PyTorch security restrictions (weights_only)")
-                st.markdown("- Network connectivity issues")
-                st.markdown("- Model repository access problems")
-                st.markdown("- Dependencies not installed")
-                
-                st.markdown("**To Fix:**")
-                st.markdown("1. Check your internet connection")
-                st.markdown("2. Verify the model repository exists")
-                st.markdown("3. Try refreshing the page")
-                st.markdown("4. The app will automatically retry with secure loading")
-                st.markdown("5. Contact support if issue persists")
     else:
         st.success("✅ **AI Mode**: Real AI model loaded and ready!")
 
