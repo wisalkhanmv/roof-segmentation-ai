@@ -97,12 +97,17 @@ def load_trained_model():
             }
             model = create_model(model_config)
 
-            # Load checkpoint
+            # Load checkpoint with proper error handling for PyTorch 2.6+
             try:
-                checkpoint = torch.load(
-                    best_checkpoint, map_location='cpu', weights_only=False)
-            except:
-                checkpoint = torch.load(best_checkpoint, map_location='cpu')
+                # First try with weights_only=True (secure)
+                checkpoint = torch.load(best_checkpoint, map_location='cpu', weights_only=True)
+            except Exception as e:
+                # If that fails, try with weights_only=False (less secure but works with custom objects)
+                try:
+                    checkpoint = torch.load(best_checkpoint, map_location='cpu', weights_only=False)
+                except Exception as e2:
+                    st.error(f"❌ Failed to load local checkpoint: {str(e2)}")
+                    return None, "Demo Mode"
 
             if 'state_dict' in checkpoint:
                 state_dict = checkpoint['state_dict']
@@ -150,8 +155,17 @@ def load_trained_model():
             }
             model = create_model(model_config)
 
-            # Load checkpoint
-            checkpoint = torch.load(model_path, map_location='cpu')
+            # Load checkpoint with proper error handling for PyTorch 2.6+
+            try:
+                # First try with weights_only=True (secure)
+                checkpoint = torch.load(model_path, map_location='cpu', weights_only=True)
+            except Exception as e:
+                # If that fails, try with weights_only=False (less secure but works with custom objects)
+                try:
+                    checkpoint = torch.load(model_path, map_location='cpu', weights_only=False)
+                except Exception as e2:
+                    st.error(f"❌ Failed to load checkpoint: {str(e2)}")
+                    return None, "Demo Mode"
 
             if 'state_dict' in checkpoint:
                 state_dict = checkpoint['state_dict']
@@ -375,6 +389,7 @@ def main():
             if checkpoint_name == "Demo Mode":
                 st.markdown("**Possible Issues:**")
                 st.markdown("- Hugging Face model download failed")
+                st.markdown("- PyTorch security restrictions (weights_only)")
                 st.markdown("- Network connectivity issues")
                 st.markdown("- Model repository access problems")
                 st.markdown("- Dependencies not installed")
@@ -383,7 +398,8 @@ def main():
                 st.markdown("1. Check your internet connection")
                 st.markdown("2. Verify the model repository exists")
                 st.markdown("3. Try refreshing the page")
-                st.markdown("4. Contact support if issue persists")
+                st.markdown("4. The app will automatically retry with secure loading")
+                st.markdown("5. Contact support if issue persists")
     else:
         st.success("✅ **AI Mode**: Real AI model loaded and ready!")
 
