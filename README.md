@@ -44,22 +44,26 @@ AI-powered roof square footage prediction from addresses using aerial imagery an
    - Set main file path: `streamlit_app.py`
    - Deploy!
 
-## 🎯 Model Upload Feature
+## 🎯 Automatic Model Loading
 
-This deployment includes a **Model Upload** feature that solves the Streamlit Cloud cloning issue:
+This deployment automatically loads your trained model from Hugging Face:
 
-### 🚀 Quick Model Upload
+### 🚀 How It Works
 1. **Open the app** in Streamlit Cloud
-2. **Go to sidebar** → Find "📤 Upload Model" section
-3. **Click "Choose model file"** → Select your `.ckpt` file
-4. **Wait for loading** → See "✅ Model uploaded and loaded successfully!"
-5. **Start predicting** → Your model is now active for real AI predictions
+2. **Model loads automatically** from Hugging Face (`dreamireal/roof-segmentation-ai`)
+3. **Upload your CSV** with addresses
+4. **Get AI predictions** automatically
+5. **Download results** with predicted roof areas
 
-### 📚 Detailed Guide
-See [MODEL_UPLOAD_GUIDE.md](MODEL_UPLOAD_GUIDE.md) for complete instructions.
+**No technical setup required!** The app automatically downloads and loads your trained model.
+
+### 🎯 Model Repository
+- **Hugging Face**: `dreamireal/roof-segmentation-ai`
+- **Model File**: `best_model.ckpt` (280MB)
+- **Status**: ✅ Automatically loaded on app startup
 
 ### 🎯 Demo Mode
-If no model is uploaded, the app runs in **Demo Mode** with synthetic predictions.
+If model download fails, the app runs in **Demo Mode** with synthetic predictions.
 
 ## 📁 Project Structure
 
