@@ -206,8 +206,55 @@ def process_csv_data(uploaded_file):
             col for col in required_columns if col not in df.columns]
 
         if missing_columns:
-            st.error(f"Missing required columns: {missing_columns}")
+            st.error(f"❌ Missing required columns: {missing_columns}")
+            st.info("📝 Your CSV should include: Name, Full_Address, City, State")
             return None
+
+        # Data quality check
+        data_issues = []
+        
+        # Check for missing addresses
+        missing_addresses = df['Full_Address'].isna().sum()
+        if missing_addresses > 0:
+            data_issues.append(f"⚠️ {missing_addresses} rows have missing addresses")
+        
+        # Check for empty addresses
+        empty_addresses = (df['Full_Address'] == '').sum()
+        if empty_addresses > 0:
+            data_issues.append(f"⚠️ {empty_addresses} rows have empty addresses")
+        
+        # Check for missing cities/states
+        missing_cities = df['City'].isna().sum()
+        if missing_cities > 0:
+            data_issues.append(f"⚠️ {missing_cities} rows have missing cities")
+        
+        missing_states = df['State'].isna().sum()
+        if missing_states > 0:
+            data_issues.append(f"⚠️ {missing_states} rows have missing states")
+        
+        # Show data quality warnings if any
+        if data_issues:
+            st.warning("📊 Data Quality Issues Detected:")
+            for issue in data_issues:
+                st.markdown(f"- {issue}")
+            
+            st.info("💡 **How to fix these issues:**")
+            st.markdown("""
+            1. **Missing Addresses**: Fill in the Full_Address column for all rows
+            2. **Empty Addresses**: Replace empty strings with actual addresses
+            3. **Missing Cities/States**: Fill in City and State for all rows
+            4. **Data Format**: Ensure addresses are in format: 'Street, City, State ZIP'
+            
+            **Example format:**
+            - Full_Address: '123 Main St, New York, NY 10001'
+            - City: 'New York'
+            - State: 'NY'
+            """)
+            
+            # Ask user if they want to continue
+            continue_anyway = st.checkbox("✅ Continue processing despite data issues?")
+            if not continue_anyway:
+                return None
 
         # Process roof data - check for both Roof 10k and Roof 20k columns
         roof_columns = ['Roof 10k', 'Roof_10k', 'Roof 20k', 'Roof_20k']
@@ -244,7 +291,17 @@ def process_csv_data(uploaded_file):
         return df
 
     except Exception as e:
-        st.error(f"Error processing CSV: {e}")
+        st.error(f"❌ Error processing CSV: {e}")
+        st.info("💡 **Common CSV issues and solutions:**")
+        st.markdown("""
+        1. **File Format**: Ensure your file is a valid CSV (.csv extension)
+        2. **Column Names**: Check that column names match exactly: Name, Full_Address, City, State
+        3. **Data Encoding**: Try saving your CSV with UTF-8 encoding
+        4. **Special Characters**: Remove any special characters from column names
+        5. **File Size**: Ensure file is not corrupted or too large
+        
+        **Need help?** Check your CSV file and try again.
+        """)
         return None
 
 
@@ -257,8 +314,14 @@ def generate_predictions_for_all_addresses(companies_df, model):
     status_text = st.empty()
 
     for i, company in companies_df.iterrows():
-        status_text.text(
-            f"Processing address {i+1}/{len(companies_df)}: {company['Full_Address'][:50]}...")
+        # Safe address display with null checking
+        address = company.get('Full_Address', '')
+        if pd.isna(address) or address == '':
+            address = f"Row {i+1} (No Address)"
+        else:
+            address = str(address)[:50] + "..." if len(str(address)) > 50 else str(address)
+        
+        status_text.text(f"Processing address {i+1}/{len(companies_df)}: {address}")
 
         # Check if we have real roof data for this row
         has_real_data = company.get('Has_Real_Data', False)
@@ -435,13 +498,30 @@ def main():
 
             if st.button("🤖 Generate Predictions for All Addresses", type="primary"):
                 # Generate predictions for ALL addresses
-                with st.spinner(f"Generating AI predictions for {len(companies_df)} addresses..."):
-                    results = generate_predictions_for_all_addresses(
-                        companies_df, model)
+                try:
+                    with st.spinner(f"Generating AI predictions for {len(companies_df)} addresses..."):
+                        results = generate_predictions_for_all_addresses(
+                            companies_df, model)
 
-                if results:
-                    # Convert to DataFrame
-                    results_df = pd.DataFrame(results)
+                    if results:
+                        # Convert to DataFrame
+                        results_df = pd.DataFrame(results)
+                except Exception as e:
+                    st.error("❌ An error occurred during prediction generation")
+                    st.info("💡 **Common causes and solutions:**")
+                    st.markdown("""
+                    1. **Missing Data**: Check that all required columns have data
+                    2. **Invalid Addresses**: Ensure addresses are properly formatted
+                    3. **File Corruption**: Try re-uploading your CSV file
+                    4. **Memory Issues**: Try processing smaller batches of data
+                    
+                    **What to do:**
+                    - Check your CSV file for missing or invalid data
+                    - Ensure all addresses are complete and properly formatted
+                    - Try uploading a smaller file first
+                    - Contact support if the issue persists
+                    """)
+                    return
 
                     # Display results
                     st.markdown('<div class="results-section">',
