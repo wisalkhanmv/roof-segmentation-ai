@@ -26,10 +26,25 @@ def download_model():
     # In production, you would download from Google Drive, AWS S3, etc.
     print("⚠️  Creating placeholder model for demonstration...")
 
-    # Create a simple placeholder model file
-    placeholder_content = b"PLACEHOLDER_MODEL_FILE"
-    with open(model_path, 'wb') as f:
-        f.write(placeholder_content)
+    # Create a more realistic placeholder model file (smaller size)
+    # This simulates a PyTorch Lightning checkpoint structure
+    import torch
+    from pytorch_lightning import LightningModule
+
+    # Create a minimal model checkpoint
+    checkpoint = {
+        'state_dict': {},
+        'epoch': 0,
+        'global_step': 0,
+        'pytorch-lightning_version': '2.0.0',
+        'callbacks': {},
+        'optimizer_states': [],
+        'lr_schedulers': [],
+        'hparams': {},
+        'hyper_parameters': {}
+    }
+
+    torch.save(checkpoint, model_path)
 
     print(f"✅ Placeholder model created at {model_path}")
     print("📝 Note: In production, replace this with actual model download from cloud storage")
@@ -48,15 +63,18 @@ def verify_model():
     file_size = model_path.stat().st_size
     print(f"📊 Model file size: {file_size:,} bytes")
 
-    # Check if it's a placeholder
-    with open(model_path, 'rb') as f:
-        content = f.read(20)  # Read first 20 bytes
-
-    if content == b"PLACEHOLDER_MODEL_FILE":
-        print("⚠️  This is a placeholder model. Replace with actual trained model for production use.")
+    # Check if it's a placeholder by trying to load it
+    try:
+        import torch
+        checkpoint = torch.load(model_path, map_location='cpu')
+        if not checkpoint.get('state_dict'):
+            print("⚠️  This appears to be a placeholder model. Replace with actual trained model for production use.")
+            return False
+        print("✅ Model checkpoint loaded successfully")
+        return True
+    except Exception as e:
+        print(f"⚠️  Model verification failed: {e}")
         return False
-
-    return True
 
 
 if __name__ == "__main__":

@@ -24,6 +24,8 @@ MANIFEST
 # PyTorch
 *.pth
 *.pt
+*.ckpt
+checkpoints/*.ckpt
 
 # Jupyter Notebook
 .ipynb_checkpoints
