@@ -167,6 +167,176 @@ def load_model_from_upload(uploaded_file):
         return None, False
 
 
+def download_model_from_url(url):
+    """Download model from cloud storage URL"""
+    try:
+        import requests
+        from pathlib import Path
+        
+        # Create checkpoints directory
+        checkpoint_dir = Path("checkpoints")
+        checkpoint_dir.mkdir(exist_ok=True)
+        
+        model_path = checkpoint_dir / "downloaded_model.ckpt"
+        
+        # Download with progress
+        response = requests.get(url, stream=True)
+        response.raise_for_status()
+        
+        total_size = int(response.headers.get('content-length', 0))
+        
+        with st.spinner(f"Downloading model ({total_size / (1024*1024):.1f} MB)..."):
+            with open(model_path, 'wb') as f:
+                downloaded = 0
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        
+                        # Update progress
+                        if total_size > 0:
+                            progress = downloaded / total_size
+                            st.progress(progress)
+        
+        return model_path
+        
+    except Exception as e:
+        st.error(f"Error downloading model: {e}")
+        return None
+
+
+def load_model_from_huggingface():
+    """Load model from Hugging Face"""
+    try:
+        # Load model architecture
+        model_config = {
+            'model_name': 'unet',
+            'backbone': 'resnet34',
+            'classes': 1,
+            'encoder_weights': 'imagenet'
+        }
+        model = create_model(model_config)
+
+        # Hugging Face model selection
+        st.markdown("### 🎯 Hugging Face Model")
+        
+        # Option 1: Direct model ID input
+        model_id = st.text_input(
+            "Enter Hugging Face model ID:",
+            placeholder="username/model-name",
+            help="e.g., wisalkhanmv/roof-segmentation-model"
+        )
+        
+        # Option 2: File selection from model
+        if model_id:
+            try:
+                from huggingface_hub import hf_hub_download, list_repo_files
+                
+                # List available files
+                with st.spinner("Fetching model files..."):
+                    files = list_repo_files(model_id)
+                    ckpt_files = [f for f in files if f.endswith('.ckpt')]
+                
+                if ckpt_files:
+                    selected_file = st.selectbox(
+                        "Select model file:",
+                        ckpt_files,
+                        help="Choose the checkpoint file to download"
+                    )
+                    
+                    if st.button("📥 Download from Hugging Face", type="primary"):
+                        with st.spinner(f"Downloading {selected_file}..."):
+                            model_path = hf_hub_download(
+                                repo_id=model_id,
+                                filename=selected_file,
+                                cache_dir="checkpoints"
+                            )
+                        
+                        # Load checkpoint
+                        checkpoint = torch.load(model_path, map_location='cpu')
+                        
+                        if 'state_dict' in checkpoint:
+                            state_dict = checkpoint['state_dict']
+                            new_state_dict = {}
+                            for key, value in state_dict.items():
+                                if key.startswith('model.'):
+                                    new_key = key[6:]
+                                    new_state_dict[new_key] = value
+                                else:
+                                    new_state_dict[key] = value
+                            model.load_state_dict(new_state_dict)
+                        else:
+                            model.load_state_dict(checkpoint)
+
+                        model.eval()
+                        st.session_state.trained_model = model
+                        st.success(f"✅ Model loaded from Hugging Face: {model_id}")
+                        return model, True
+                else:
+                    st.warning("No .ckpt files found in this model repository")
+                    
+            except ImportError:
+                st.error("huggingface_hub not installed. Please install it: `pip install huggingface_hub`")
+            except Exception as e:
+                st.error(f"Error accessing Hugging Face model: {e}")
+        
+        return None, False
+        
+    except Exception as e:
+        st.error(f"Error loading model from Hugging Face: {e}")
+        return None, False
+
+
+def load_model_from_cloud_storage():
+    """Load model from cloud storage (legacy method)"""
+    try:
+        # Load model architecture
+        model_config = {
+            'model_name': 'unet',
+            'backbone': 'resnet34',
+            'classes': 1,
+            'encoder_weights': 'imagenet'
+        }
+        model = create_model(model_config)
+
+        # Download model from cloud storage
+        st.markdown("### ☁️ Cloud Storage (Legacy)")
+        model_url = st.text_input(
+            "Enter your model URL:",
+            placeholder="https://drive.google.com/uc?export=download&id=YOUR_FILE_ID",
+            help="Paste a direct download link to your .ckpt model file"
+        )
+        
+        if model_url:
+            model_path = download_model_from_url(model_url)
+            if model_path and model_path.exists():
+                # Load checkpoint
+                checkpoint = torch.load(model_path, map_location='cpu')
+                
+                if 'state_dict' in checkpoint:
+                    state_dict = checkpoint['state_dict']
+                    new_state_dict = {}
+                    for key, value in state_dict.items():
+                        if key.startswith('model.'):
+                            new_key = key[6:]
+                            new_state_dict[new_key] = value
+                        else:
+                            new_state_dict[key] = value
+                    model.load_state_dict(new_state_dict)
+                else:
+                    model.load_state_dict(checkpoint)
+
+                model.eval()
+                st.session_state.trained_model = model
+                return model, True
+        
+        return None, False
+        
+    except Exception as e:
+        st.error(f"Error loading model from cloud storage: {e}")
+        return None, False
+
+
 def process_csv_data(uploaded_file):
     """Process uploaded CSV data"""
     try:
@@ -337,25 +507,69 @@ def main():
             st.sidebar.success(f"✅ Model loaded: {checkpoint_name}")
 
     # Model upload section
-    st.sidebar.markdown("### 📤 Upload Model")
-    st.sidebar.markdown("Upload your trained model file (.ckpt) for real AI predictions:")
+    st.sidebar.markdown("### 📤 Load Model")
     
-    uploaded_model = st.sidebar.file_uploader(
-        "Choose model file",
-        type=['ckpt'],
-        help="Upload your trained PyTorch Lightning checkpoint file",
-        key="model_uploader"
-    )
+    # Create tabs for different loading methods
+    model_tab1, model_tab2, model_tab3 = st.sidebar.tabs(["🤗 HF Hub", "📁 Upload", "☁️ Cloud URL"])
     
-    if uploaded_model is not None:
-        with st.spinner("Loading uploaded model..."):
-            new_model, success = load_model_from_upload(uploaded_model)
+    with model_tab1:
+        st.markdown("**🎯 Recommended: Hugging Face Hub**")
+        st.markdown("Best for large models and easy sharing")
+        
+        if st.button("🔗 Load from Hugging Face", type="primary"):
+            new_model, success = load_model_from_huggingface()
             if success:
-                st.sidebar.success("✅ Model uploaded and loaded successfully!")
+                st.success("✅ Model loaded from Hugging Face!")
                 model = new_model
-                checkpoint_name = "Uploaded Model"
+                checkpoint_name = "HF Model"
             else:
-                st.sidebar.error("❌ Failed to load uploaded model.")
+                st.error("❌ Failed to load from Hugging Face.")
+                if model is None:
+                    model = None
+                    checkpoint_name = "Demo Mode"
+    
+    with model_tab2:
+        st.markdown("**For models under 200MB:**")
+        uploaded_model = st.file_uploader(
+            "Choose model file",
+            type=['ckpt'],
+            help="Upload your trained PyTorch Lightning checkpoint file (max 200MB)",
+            key="model_uploader"
+        )
+        
+        if uploaded_model is not None:
+            # Check file size
+            uploaded_model.seek(0, 2)  # Go to end
+            file_size = uploaded_model.tell()
+            uploaded_model.seek(0)  # Go back to start
+            
+            if file_size > 200 * 1024 * 1024:  # 200MB
+                st.error("❌ File too large! Use HF Hub tab for files over 200MB.")
+            else:
+                with st.spinner("Loading uploaded model..."):
+                    new_model, success = load_model_from_upload(uploaded_model)
+                    if success:
+                        st.success("✅ Model uploaded and loaded successfully!")
+                        model = new_model
+                        checkpoint_name = "Uploaded Model"
+                    else:
+                        st.error("❌ Failed to load uploaded model.")
+                        if model is None:
+                            model = None
+                            checkpoint_name = "Demo Mode"
+    
+    with model_tab3:
+        st.markdown("**Legacy: Cloud Storage**")
+        st.markdown("For Google Drive/Dropbox links")
+        
+        if st.button("🔗 Load from Cloud Storage", type="primary"):
+            new_model, success = load_model_from_cloud_storage()
+            if success:
+                st.success("✅ Model downloaded and loaded successfully!")
+                model = new_model
+                checkpoint_name = "Cloud Model"
+            else:
+                st.error("❌ Failed to load model from cloud storage.")
                 if model is None:
                     model = None
                     checkpoint_name = "Demo Mode"
