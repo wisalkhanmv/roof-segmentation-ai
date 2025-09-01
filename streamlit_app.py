@@ -123,14 +123,23 @@ def load_trained_model():
 
         # Auto-download from Hugging Face if no local model
         try:
-            from huggingface_hub import hf_hub_download
+            # Check if huggingface_hub is available
+            try:
+                from huggingface_hub import hf_hub_download
+            except ImportError:
+                st.error("huggingface_hub not available. Install with: pip install huggingface_hub")
+                return None, "Demo Mode"
             
-            # Download model from Hugging Face
-            model_path = hf_hub_download(
-                repo_id="dreamireal/roof-segmentation-ai",
-                filename="best_model.ckpt",
-                cache_dir="checkpoints"
-            )
+            # Show download progress
+            with st.spinner("📥 Downloading AI model from Hugging Face..."):
+                # Download model from Hugging Face
+                model_path = hf_hub_download(
+                    repo_id="dreamireal/roof-segmentation-ai",
+                    filename="best_model.ckpt",
+                    cache_dir="checkpoints"
+                )
+            
+            st.success("✅ Model downloaded successfully!")
             
             # Load model
             model_config = {
@@ -162,7 +171,9 @@ def load_trained_model():
             return model, "Hugging Face Model"
 
         except Exception as download_error:
-            # If download fails, return None for demo mode
+            # Log the specific error for debugging
+            st.error(f"❌ Failed to download model: {str(download_error)}")
+            st.info("📝 Falling back to demo mode with synthetic predictions")
             return None, "Demo Mode"
 
     except Exception as e:
@@ -321,7 +332,7 @@ def main():
     # Sidebar
     st.sidebar.title("🔧 Configuration")
 
-    # Model upload section
+    # Model status
     st.sidebar.markdown("### 🤖 AI Model")
     
     # Check if model is already loaded
@@ -334,21 +345,12 @@ def main():
         with st.spinner("Loading AI model..."):
             model, checkpoint_name = load_trained_model()
 
-        if model is None and checkpoint_name != "Demo Mode":
-            st.sidebar.error("❌ Failed to load AI model.")
-            st.sidebar.info("📝 Please upload your trained model file below.")
-        elif checkpoint_name == "Demo Mode":
-            st.sidebar.warning(f"⚠️ {checkpoint_name}")
-            st.sidebar.info("📝 Upload your trained model for real AI predictions.")
-        else:
-            st.sidebar.success(f"✅ Model loaded: {checkpoint_name}")
-
-    # Model status (simplified)
+    # Show model status
     if checkpoint_name == "Demo Mode":
         st.sidebar.warning("⚠️ Demo Mode")
         st.sidebar.info("Using synthetic predictions")
     else:
-        st.sidebar.success("✅ AI Model Loaded")
+        st.sidebar.success(f"✅ {checkpoint_name}")
         st.sidebar.info("Real AI predictions active")
 
     # Model info
@@ -363,6 +365,25 @@ def main():
     # Simple status indicator
     if model is None or checkpoint_name == "Demo Mode":
         st.info("🤖 **Demo Mode**: Using synthetic predictions for demonstration")
+        
+        # Debug info for demo mode
+        with st.expander("🔍 Debug Info (Click to see what happened)"):
+            st.markdown("**Model Loading Status:**")
+            st.code(f"Checkpoint Name: {checkpoint_name}")
+            st.code(f"Model Object: {type(model)}")
+            
+            if checkpoint_name == "Demo Mode":
+                st.markdown("**Possible Issues:**")
+                st.markdown("- Hugging Face model download failed")
+                st.markdown("- Network connectivity issues")
+                st.markdown("- Model repository access problems")
+                st.markdown("- Dependencies not installed")
+                
+                st.markdown("**To Fix:**")
+                st.markdown("1. Check your internet connection")
+                st.markdown("2. Verify the model repository exists")
+                st.markdown("3. Try refreshing the page")
+                st.markdown("4. Contact support if issue persists")
     else:
         st.success("✅ **AI Mode**: Real AI model loaded and ready!")
 
