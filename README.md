@@ -44,13 +44,22 @@ AI-powered roof square footage prediction from addresses using aerial imagery an
    - Set main file path: `streamlit_app.py`
    - Deploy!
 
-## 🎯 Demo Mode
+## 🎯 Model Upload Feature
 
-This deployment runs in **Demo Mode** with synthetic predictions. For production use:
+This deployment includes a **Model Upload** feature that solves the Streamlit Cloud cloning issue:
 
-1. **Add Your Model**: Place your trained `best_model.ckpt` file in the `checkpoints/` folder
-2. **Redeploy**: The app will automatically use real AI predictions
-3. **Model Format**: Use the model trained with `train_roof_area_predictor.py`
+### 🚀 Quick Model Upload
+1. **Open the app** in Streamlit Cloud
+2. **Go to sidebar** → Find "📤 Upload Model" section
+3. **Click "Choose model file"** → Select your `.ckpt` file
+4. **Wait for loading** → See "✅ Model uploaded and loaded successfully!"
+5. **Start predicting** → Your model is now active for real AI predictions
+
+### 📚 Detailed Guide
+See [MODEL_UPLOAD_GUIDE.md](MODEL_UPLOAD_GUIDE.md) for complete instructions.
+
+### 🎯 Demo Mode
+If no model is uploaded, the app runs in **Demo Mode** with synthetic predictions.
 
 ## 📁 Project Structure
 
