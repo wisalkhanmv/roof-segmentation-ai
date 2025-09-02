@@ -183,9 +183,9 @@ def load_trained_model():
             st.session_state.trained_model = model
             return model, "Hugging Face Model"
 
-    except Exception as download_error:
-        # Fall back to demo mode silently
-        return None, "Demo Mode"
+        except Exception as download_error:
+            # Fall back to demo mode silently
+            return None, "Demo Mode"
 
     except Exception as e:
         st.error(f"Error loading model: {e}")
