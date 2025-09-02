@@ -376,37 +376,37 @@ def generate_predictions_for_all_addresses(model, companies_df):
         else:
             # Need to predict - use AI model or demo mode
             if model is not None:
-                # Generate synthetic prediction as fallback
-                synthetic_image = np.random.randint(
-                    0, 255, (512, 512, 3), dtype=np.uint8)
+            # Generate synthetic prediction as fallback
+            synthetic_image = np.random.randint(
+                0, 255, (512, 512, 3), dtype=np.uint8)
 
-                # Preprocess image
-                image_normalized = synthetic_image.astype(np.float32) / 255.0
-                image_normalized = (image_normalized -
-                                    [0.485, 0.456, 0.406]) / [0.229, 0.224, 0.225]
+        # Preprocess image
+        image_normalized = synthetic_image.astype(np.float32) / 255.0
+        image_normalized = (image_normalized -
+                            [0.485, 0.456, 0.406]) / [0.229, 0.224, 0.225]
 
-                # Convert to tensor
-                image_tensor = torch.from_numpy(image_normalized).permute(
-                    2, 0, 1).unsqueeze(0).float()
+        # Convert to tensor
+        image_tensor = torch.from_numpy(image_normalized).permute(
+            2, 0, 1).unsqueeze(0).float()
 
-                # Run inference
-                with torch.no_grad():
-                    prediction = model(image_tensor)
-                    prediction_sigmoid = torch.sigmoid(prediction)
-                    prediction_binary = (prediction_sigmoid > 0.5).float()
+        # Run inference
+        with torch.no_grad():
+            prediction = model(image_tensor)
+            prediction_sigmoid = torch.sigmoid(prediction)
+            prediction_binary = (prediction_sigmoid > 0.5).float()
 
-                # Convert to numpy
-                pred_mask = prediction_binary.squeeze().numpy()
+        # Convert to numpy
+        pred_mask = prediction_binary.squeeze().numpy()
 
-                # Calculate predicted roof area
-                predicted_pixels = np.sum(pred_mask > 0.5)
-                total_pixels = pred_mask.shape[0] * pred_mask.shape[1]
-                predicted_area_ratio = predicted_pixels / total_pixels
+        # Calculate predicted roof area
+        predicted_pixels = np.sum(pred_mask > 0.5)
+        total_pixels = pred_mask.shape[0] * pred_mask.shape[1]
+        predicted_area_ratio = predicted_pixels / total_pixels
 
-                # Estimate predicted square footage (assuming 512x512 = 1 sq mile = 27,878,400 sq ft)
-                estimated_sqft_per_pixel = 27878400 / \
-                    (512 * 512)  # sq ft per pixel
-                predicted_sqft = predicted_pixels * estimated_sqft_per_pixel
+        # Estimate predicted square footage (assuming 512x512 = 1 sq mile = 27,878,400 sq ft)
+        estimated_sqft_per_pixel = 27878400 / \
+            (512 * 512)  # sq ft per pixel
+        predicted_sqft = predicted_pixels * estimated_sqft_per_pixel
 
                 data_source = 'AI Prediction'
             else:
@@ -418,11 +418,11 @@ def generate_predictions_for_all_addresses(model, companies_df):
                 predicted_area_ratio = 0.3  # 30% of image
                 data_source = 'Demo Mode'
 
-            # Create result row - keep ALL original columns and add prediction
-            result_row = company.copy()
-            result_row['Final_Roof_Area_SqFt'] = predicted_sqft
-            # Formatted with commas
-            result_row['Sq_Ft'] = f"{predicted_sqft:,.0f}"
+        # Create result row - keep ALL original columns and add prediction
+        result_row = company.copy()
+        result_row['Final_Roof_Area_SqFt'] = predicted_sqft
+        # Formatted with commas
+        result_row['Sq_Ft'] = f"{predicted_sqft:,.0f}"
             result_row['Data_Source'] = data_source
             result_row['Predicted_SqFt'] = float(predicted_sqft)
             result_row['Predicted_Area_Ratio'] = float(predicted_area_ratio)
@@ -730,22 +730,22 @@ def main():
                             "🏠 Simple Preview (Address + Final Roof Area)")
 
                         try:
-                            # Create preview with Address, Final Roof Area, and Data Source
-                            preview_columns = [
-                                'Full_Address', 'Sq_Ft', 'Data_Source']
-                            if all(col in results_df.columns for col in preview_columns):
-                                simplified_preview = results_df[preview_columns].copy(
-                                )
-                                simplified_preview.columns = [
-                                    'Address', 'Roof Area (sq ft)', 'Data Source']
+                        # Create preview with Address, Final Roof Area, and Data Source
+                        preview_columns = [
+                            'Full_Address', 'Sq_Ft', 'Data_Source']
+                        if all(col in results_df.columns for col in preview_columns):
+                            simplified_preview = results_df[preview_columns].copy(
+                            )
+                            simplified_preview.columns = [
+                                'Address', 'Roof Area (sq ft)', 'Data Source']
 
                                 # Use st.table instead of st.dataframe
                                 st.table(simplified_preview)
-                                st.caption(
-                                    "Shows final roof area (real data or AI prediction) and data source")
-                            else:
-                                st.error(
-                                    f"❌ Required columns not found. Available columns: {list(results_df.columns)}")
+                            st.caption(
+                                "Shows final roof area (real data or AI prediction) and data source")
+                        else:
+                            st.error(
+                                f"❌ Required columns not found. Available columns: {list(results_df.columns)}")
                         except Exception as e:
                             st.error(
                                 f"❌ Error displaying preview table: {str(e)}")
