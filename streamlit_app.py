@@ -543,14 +543,21 @@ def main():
                             model, companies_df)
 
                     if results:
-                        # Convert to DataFrame
-                        results_df = pd.DataFrame(results)
+                        try:
+                            # Convert to DataFrame
+                            results_df = pd.DataFrame(results)
+                            print(f"📊 Results DataFrame created with shape: {results_df.shape}")
+                            print(f"📊 Results DataFrame columns: {list(results_df.columns)}")
 
-                        # Display results
-                        st.markdown('<div class="results-section">',
-                                    unsafe_allow_html=True)
-                        st.subheader(
-                            "🎯 Results - All Addresses with Predictions")
+                            # Display results
+                            st.markdown('<div class="results-section">',
+                                        unsafe_allow_html=True)
+                            st.subheader(
+                                "🎯 Results - All Addresses with Predictions")
+                        except Exception as df_error:
+                            st.error(f"❌ Error creating results DataFrame: {str(df_error)}")
+                            st.info("💡 The predictions were generated but there was an issue displaying them.")
+                            return
 
                         # Show summary metrics
                         col1, col2, col3, col4 = st.columns(4)
@@ -567,22 +574,33 @@ def main():
                         with col2:
                             st.markdown('<div class="metric-container">',
                                         unsafe_allow_html=True)
-                            avg_predicted = results_df['Predicted_SqFt'].mean()
-                            st.metric(
-                                "Average Predicted SqFt",
-                                f"{avg_predicted:,.0f}"
-                            )
+                            try:
+                                # Convert to numeric, handling any non-numeric values
+                                predicted_sqft_numeric = pd.to_numeric(results_df['Predicted_SqFt'], errors='coerce')
+                                avg_predicted = predicted_sqft_numeric.mean()
+                                st.metric(
+                                    "Average Predicted SqFt",
+                                    f"{avg_predicted:,.0f}"
+                                )
+                            except Exception as metric_error:
+                                st.metric("Average Predicted SqFt", "Error")
+                                print(f"❌ Error calculating average: {metric_error}")
                             st.markdown('</div>', unsafe_allow_html=True)
 
                         with col3:
                             st.markdown('<div class="metric-container">',
                                         unsafe_allow_html=True)
-                            total_predicted = results_df['Predicted_SqFt'].sum(
-                            )
-                            st.metric(
-                                "Total Predicted SqFt",
-                                f"{total_predicted:,.0f}"
-                            )
+                            try:
+                                # Convert to numeric, handling any non-numeric values
+                                predicted_sqft_numeric = pd.to_numeric(results_df['Predicted_SqFt'], errors='coerce')
+                                total_predicted = predicted_sqft_numeric.sum()
+                                st.metric(
+                                    "Total Predicted SqFt",
+                                    f"{total_predicted:,.0f}"
+                                )
+                            except Exception as metric_error:
+                                st.metric("Total Predicted SqFt", "Error")
+                                print(f"❌ Error calculating total: {metric_error}")
                             st.markdown('</div>', unsafe_allow_html=True)
                         with col4:
                             st.markdown('<div class="metric-container">',
