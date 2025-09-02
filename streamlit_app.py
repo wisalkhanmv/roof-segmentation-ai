@@ -381,16 +381,16 @@ def generate_predictions_for_all_addresses(model, companies_df):
         predicted_area_ratio = predicted_pixels / total_pixels
 
         # Estimate predicted square footage (assuming 512x512 = 1 sq mile = 27,878,400 sq ft)
-            estimated_sqft_per_pixel = 27878400 / \
-                (512 * 512)  # sq ft per pixel
+        estimated_sqft_per_pixel = 27878400 / \
+            (512 * 512)  # sq ft per pixel
         predicted_sqft = predicted_pixels * estimated_sqft_per_pixel
 
         # Create result row - keep ALL original columns and add prediction
         result_row = company.copy()
-            result_row['Final_Roof_Area_SqFt'] = predicted_sqft
-            # Formatted with commas
-            result_row['Sq_Ft'] = f"{predicted_sqft:,.0f}"
-            result_row['Data_Source'] = 'AI Prediction'
+        result_row['Final_Roof_Area_SqFt'] = predicted_sqft
+        # Formatted with commas
+        result_row['Sq_Ft'] = f"{predicted_sqft:,.0f}"
+        result_row['Data_Source'] = 'AI Prediction'
         result_row['Predicted_SqFt'] = predicted_sqft
         result_row['Predicted_Area_Ratio'] = predicted_area_ratio
         result_row['Predicted_Pixels'] = predicted_pixels
