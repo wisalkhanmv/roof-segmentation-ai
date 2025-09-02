@@ -517,74 +517,71 @@ def main():
             if st.button("🤖 Generate Predictions for All Addresses", type="primary"):
                 # Generate predictions for ALL addresses
                 try:
-                with st.spinner(f"Generating AI predictions for {len(companies_df)} addresses..."):
+                    with st.spinner(f"Generating AI predictions for {len(companies_df)} addresses..."):
                         results = generate_predictions_for_all_addresses(
                             model, companies_df)
 
-                if results:
-                    # Convert to DataFrame
-                    results_df = pd.DataFrame(results)
+                    if results:
+                        # Convert to DataFrame
+                        results_df = pd.DataFrame(results)
 
-                    # Display results
+                        # Display results
                         st.markdown('<div class="results-section">',
                                     unsafe_allow_html=True)
                         st.subheader(
                             "🎯 Results - All Addresses with Predictions")
 
                         # Show summary metrics
-                    col1, col2, col3, col4 = st.columns(4)
+                        col1, col2, col3, col4 = st.columns(4)
 
-                    with col1:
+                        with col1:
                             st.markdown('<div class="metric-container">',
                                         unsafe_allow_html=True)
-                        st.metric(
-                            "Total Addresses Processed",
-                            len(results_df)
-                        )
-                            st.markdown('</div>', unsafe_allow_html=True)
-                    
-                    with col2:
-                            st.markdown('<div class="metric-container">',
-                                        unsafe_allow_html=True)
-                        avg_predicted = results_df['Predicted_SqFt'].mean()
-                        st.metric(
-                            "Average Predicted SqFt",
-                            f"{avg_predicted:,.0f}"
-                        )
-                            st.markdown('</div>', unsafe_allow_html=True)
-                    
-                    with col3:
-                            st.markdown('<div class="metric-container">',
-                                        unsafe_allow_html=True)
-                            total_predicted = results_df['Predicted_SqFt'].sum(
+                            st.metric(
+                                "Total Addresses Processed",
+                                len(results_df)
                             )
-                        st.metric(
-                            "Total Predicted SqFt",
-                            f"{total_predicted:,.0f}"
-                        )
                             st.markdown('</div>', unsafe_allow_html=True)
-                    
-                    with col4:
+
+                        with col2:
                             st.markdown('<div class="metric-container">',
                                         unsafe_allow_html=True)
-                        if 'Roof_SqFt_Real' in results_df.columns:
-                                valid_comparisons = results_df[results_df['Roof_SqFt_Real'].notna(
-                                )]
-                            if len(valid_comparisons) > 0:
+                            avg_predicted = results_df['Predicted_SqFt'].mean()
+                            st.metric(
+                                "Average Predicted SqFt",
+                                f"{avg_predicted:,.0f}"
+                            )
+                            st.markdown('</div>', unsafe_allow_html=True)
+
+                        with col3:
+                            st.markdown('<div class="metric-container">',
+                                        unsafe_allow_html=True)
+                            total_predicted = results_df['Predicted_SqFt'].sum()
+                            st.metric(
+                                "Total Predicted SqFt",
+                                f"{total_predicted:,.0f}"
+                            )
+                            st.markdown('</div>', unsafe_allow_html=True)
+                        with col4:
+                            st.markdown('<div class="metric-container">',
+                                        unsafe_allow_html=True)
+                            if 'Roof_SqFt_Real' in results_df.columns:
+                                valid_comparisons = results_df[results_df['Roof_SqFt_Real'].notna()]
+                                if len(valid_comparisons) > 0:
                                     avg_error = (
                                         valid_comparisons['Predicted_SqFt'] - valid_comparisons['Roof_SqFt_Real']).abs().mean()
-                                st.metric(
-                                    "Avg Error (vs Real)",
-                                    f"{avg_error:,.0f}"
-                                )
+                                    st.metric(
+                                        "Avg Error (vs Real)",
+                                        f"{avg_error:,.0f}"
+                                    )
+                                else:
+                                    st.metric("Avg Error", "N/A")
                             else:
                                 st.metric("Avg Error", "N/A")
-                        else:
-                            st.metric("Avg Error", "N/A")
                             st.markdown('</div>', unsafe_allow_html=True)
-                    
-                    # Show results table
-                    st.subheader("📊 Complete Results Table")
+
+                        # Show results table
+                        st.subheader("📊 Complete Results Table")
                         st.dataframe(results_df, width='stretch')
 
                         # Show simplified preview table
@@ -607,18 +604,18 @@ def main():
                             st.error(
                                 f"❌ Required columns not found. Available columns: {list(results_df.columns)}")
                             return
-                    
-                    # Download results
-                    csv_data = results_df.to_csv(index=False)
-                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    
-                    st.download_button(
-                        label="📥 Download Complete CSV with Predictions",
-                        data=csv_data,
-                        file_name=f"roof_predictions_complete_{timestamp}.csv",
-                        mime="text/csv"
-                    )
-                    
+
+                        # Download results
+                        csv_data = results_df.to_csv(index=False)
+                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+                        st.download_button(
+                            label="📥 Download Complete CSV with Predictions",
+                            data=csv_data,
+                            file_name=f"roof_predictions_complete_{timestamp}.csv",
+                            mime="text/csv"
+                        )
+
                         # Download simplified CSV with Address and Final Roof Area
                         export_columns = [
                             'Full_Address', 'Sq_Ft', 'Data_Source']
@@ -640,20 +637,20 @@ def main():
                             return
 
                         st.markdown('</div>', unsafe_allow_html=True)
-                    
-                    # Insights
+
+                        # Insights
                         st.markdown('<div class="results-section">',
                                     unsafe_allow_html=True)
-                    st.subheader("💡 What You Got")
-                    
+                        st.subheader("💡 What You Got")
+
                         # Count data sources
                         real_data_count = len(
                             results_df[results_df['Data_Source'] == 'Real Data'])
                         ai_prediction_count = len(
                             results_df[results_df['Data_Source'] == 'AI Prediction'])
-                    
-                    st.markdown(f"""
-                    <div class="success-box">
+
+                        st.markdown(f"""
+                        <div class="success-box">
                             <h4>✅ CSV Data Processing Complete</h4>
                             <p><strong>All {len(results_df)} addresses</strong> processed successfully.</p>
                             <p><strong>Data Sources:</strong></p>
@@ -666,19 +663,19 @@ def main():
                                 <li><strong>Address</strong>: Full address from your CSV</li>
                                 <li><strong>Roof Area (sq ft)</strong>: Final roof area (real data or AI prediction)</li>
                                 <li><strong>Data Source</strong>: Shows whether data came from real values or AI prediction</li>
-                        </ul>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    if 'Roof_SqFt_Real' in results_df.columns:
-                        st.markdown(f"""
-                        <div class="info-box">
-                            <h4>📊 Comparison with Real Data</h4>
-                            <p>Your CSV included real roof measurements for comparison. The AI predictions can be compared against these values to assess accuracy.</p>
-                            <p><strong>Note:</strong> Current predictions use synthetic images. For production use, you'll need actual aerial imagery for each address.</p>
+                            </ul>
                         </div>
                         """, unsafe_allow_html=True)
-    
+
+                        if 'Roof_SqFt_Real' in results_df.columns:
+                            st.markdown(f"""
+                            <div class="info-box">
+                                <h4>📊 Comparison with Real Data</h4>
+                                <p>Your CSV included real roof measurements for comparison. The AI predictions can be compared against these values to assess accuracy.</p>
+                                <p><strong>Note:</strong> Current predictions use synthetic images. For production use, you'll need actual aerial imagery for each address.</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+
                         st.markdown('</div>', unsafe_allow_html=True)
                     else:
                         st.warning(
