@@ -324,9 +324,9 @@ def generate_predictions_for_all_addresses(model, companies_df):
             result_row['Final_Roof_Area_SqFt'] = synthetic_sqft
             result_row['Sq_Ft'] = f"{synthetic_sqft:,.0f}"
             result_row['Data_Source'] = 'Demo Mode'
-            result_row['Predicted_SqFt'] = synthetic_sqft
-            result_row['Predicted_Area_Ratio'] = 0.3  # 30% of image
-            result_row['Predicted_Pixels'] = 78643  # Random pixel count
+            result_row['Predicted_SqFt'] = float(synthetic_sqft)
+            result_row['Predicted_Area_Ratio'] = float(0.3)  # 30% of image
+            result_row['Predicted_Pixels'] = int(78643)  # Random pixel count
             results.append(result_row)
         return results
 
@@ -367,52 +367,66 @@ def generate_predictions_for_all_addresses(model, companies_df):
             # Formatted with commas
             result_row['Sq_Ft'] = f"{real_roof_area:,.0f}"
             result_row['Data_Source'] = 'Real Data'
-            result_row['Predicted_SqFt'] = None
-            result_row['Predicted_Area_Ratio'] = None
-            result_row['Predicted_Pixels'] = None
+            result_row['Predicted_SqFt'] = float(
+                real_roof_area)  # Use real data as prediction
+            result_row['Predicted_Area_Ratio'] = float(
+                0.0)  # No prediction ratio for real data
+            # No prediction pixels for real data
+            result_row['Predicted_Pixels'] = int(0)
         else:
-            # Need to predict - use AI model
-            # Generate synthetic prediction as fallback
-            synthetic_image = np.random.randint(
-                0, 255, (512, 512, 3), dtype=np.uint8)
+            # Need to predict - use AI model or demo mode
+            if model is not None:
+                # Generate synthetic prediction as fallback
+                synthetic_image = np.random.randint(
+                    0, 255, (512, 512, 3), dtype=np.uint8)
 
-        # Preprocess image
-        image_normalized = synthetic_image.astype(np.float32) / 255.0
-        image_normalized = (image_normalized -
-                            [0.485, 0.456, 0.406]) / [0.229, 0.224, 0.225]
+                # Preprocess image
+                image_normalized = synthetic_image.astype(np.float32) / 255.0
+                image_normalized = (image_normalized -
+                                    [0.485, 0.456, 0.406]) / [0.229, 0.224, 0.225]
 
-        # Convert to tensor
-        image_tensor = torch.from_numpy(image_normalized).permute(
-            2, 0, 1).unsqueeze(0).float()
+                # Convert to tensor
+                image_tensor = torch.from_numpy(image_normalized).permute(
+                    2, 0, 1).unsqueeze(0).float()
 
-        # Run inference
-        with torch.no_grad():
-            prediction = model(image_tensor)
-            prediction_sigmoid = torch.sigmoid(prediction)
-            prediction_binary = (prediction_sigmoid > 0.5).float()
+                # Run inference
+                with torch.no_grad():
+                    prediction = model(image_tensor)
+                    prediction_sigmoid = torch.sigmoid(prediction)
+                    prediction_binary = (prediction_sigmoid > 0.5).float()
 
-        # Convert to numpy
-        pred_mask = prediction_binary.squeeze().numpy()
+                # Convert to numpy
+                pred_mask = prediction_binary.squeeze().numpy()
 
-        # Calculate predicted roof area
-        predicted_pixels = np.sum(pred_mask > 0.5)
-        total_pixels = pred_mask.shape[0] * pred_mask.shape[1]
-        predicted_area_ratio = predicted_pixels / total_pixels
+                # Calculate predicted roof area
+                predicted_pixels = np.sum(pred_mask > 0.5)
+                total_pixels = pred_mask.shape[0] * pred_mask.shape[1]
+                predicted_area_ratio = predicted_pixels / total_pixels
 
-        # Estimate predicted square footage (assuming 512x512 = 1 sq mile = 27,878,400 sq ft)
-        estimated_sqft_per_pixel = 27878400 / \
-            (512 * 512)  # sq ft per pixel
-        predicted_sqft = predicted_pixels * estimated_sqft_per_pixel
+                # Estimate predicted square footage (assuming 512x512 = 1 sq mile = 27,878,400 sq ft)
+                estimated_sqft_per_pixel = 27878400 / \
+                    (512 * 512)  # sq ft per pixel
+                predicted_sqft = predicted_pixels * estimated_sqft_per_pixel
 
-        # Create result row - keep ALL original columns and add prediction
-        result_row = company.copy()
-        result_row['Final_Roof_Area_SqFt'] = predicted_sqft
-        # Formatted with commas
-        result_row['Sq_Ft'] = f"{predicted_sqft:,.0f}"
-        result_row['Data_Source'] = 'AI Prediction'
-        result_row['Predicted_SqFt'] = predicted_sqft
-        result_row['Predicted_Area_Ratio'] = predicted_area_ratio
-        result_row['Predicted_Pixels'] = predicted_pixels
+                data_source = 'AI Prediction'
+            else:
+                # Demo mode - generate synthetic prediction
+                predicted_sqft = np.random.randint(
+                    5000, 50000)  # Random between 5k-50k sqft
+                # Approximate pixel count
+                predicted_pixels = int(predicted_sqft / 106.4)
+                predicted_area_ratio = 0.3  # 30% of image
+                data_source = 'Demo Mode'
+
+            # Create result row - keep ALL original columns and add prediction
+            result_row = company.copy()
+            result_row['Final_Roof_Area_SqFt'] = predicted_sqft
+            # Formatted with commas
+            result_row['Sq_Ft'] = f"{predicted_sqft:,.0f}"
+            result_row['Data_Source'] = data_source
+            result_row['Predicted_SqFt'] = float(predicted_sqft)
+            result_row['Predicted_Area_Ratio'] = float(predicted_area_ratio)
+            result_row['Predicted_Pixels'] = int(predicted_pixels)
 
         results.append(result_row)
 
@@ -546,8 +560,28 @@ def main():
                         try:
                             # Convert to DataFrame
                             results_df = pd.DataFrame(results)
-                            print(f"📊 Results DataFrame created with shape: {results_df.shape}")
-                            print(f"📊 Results DataFrame columns: {list(results_df.columns)}")
+                            print(
+                                f"📊 Results DataFrame created with shape: {results_df.shape}")
+                            print(
+                                f"📊 Results DataFrame columns: {list(results_df.columns)}")
+
+                            # Debug: Check for any problematic values
+                            print(
+                                f"📊 Predicted_SqFt dtype: {results_df['Predicted_SqFt'].dtype}")
+                            print(
+                                f"📊 Predicted_SqFt has NaN: {results_df['Predicted_SqFt'].isna().any()}")
+                            print(
+                                f"📊 Predicted_SqFt sample: {results_df['Predicted_SqFt'].head()}")
+
+                            # Check other potentially problematic columns
+                            print(
+                                f"📊 Roof_SqFt_Real dtype: {results_df['Roof_SqFt_Real'].dtype}")
+                            print(
+                                f"📊 Roof_SqFt_Real sample: {results_df['Roof_SqFt_Real'].head()}")
+                            print(
+                                f"📊 Final_Roof_Area_SqFt dtype: {results_df['Final_Roof_Area_SqFt'].dtype}")
+                            print(
+                                f"📊 Final_Roof_Area_SqFt sample: {results_df['Final_Roof_Area_SqFt'].head()}")
 
                             # Display results
                             st.markdown('<div class="results-section">',
@@ -555,8 +589,10 @@ def main():
                             st.subheader(
                                 "🎯 Results - All Addresses with Predictions")
                         except Exception as df_error:
-                            st.error(f"❌ Error creating results DataFrame: {str(df_error)}")
-                            st.info("💡 The predictions were generated but there was an issue displaying them.")
+                            st.error(
+                                f"❌ Error creating results DataFrame: {str(df_error)}")
+                            st.info(
+                                "💡 The predictions were generated but there was an issue displaying them.")
                             return
 
                         # Show summary metrics
@@ -576,7 +612,8 @@ def main():
                                         unsafe_allow_html=True)
                             try:
                                 # Convert to numeric, handling any non-numeric values
-                                predicted_sqft_numeric = pd.to_numeric(results_df['Predicted_SqFt'], errors='coerce')
+                                predicted_sqft_numeric = pd.to_numeric(
+                                    results_df['Predicted_SqFt'], errors='coerce')
                                 avg_predicted = predicted_sqft_numeric.mean()
                                 st.metric(
                                     "Average Predicted SqFt",
@@ -584,7 +621,8 @@ def main():
                                 )
                             except Exception as metric_error:
                                 st.metric("Average Predicted SqFt", "Error")
-                                print(f"❌ Error calculating average: {metric_error}")
+                                print(
+                                    f"❌ Error calculating average: {metric_error}")
                             st.markdown('</div>', unsafe_allow_html=True)
 
                         with col3:
@@ -592,7 +630,8 @@ def main():
                                         unsafe_allow_html=True)
                             try:
                                 # Convert to numeric, handling any non-numeric values
-                                predicted_sqft_numeric = pd.to_numeric(results_df['Predicted_SqFt'], errors='coerce')
+                                predicted_sqft_numeric = pd.to_numeric(
+                                    results_df['Predicted_SqFt'], errors='coerce')
                                 total_predicted = predicted_sqft_numeric.sum()
                                 st.metric(
                                     "Total Predicted SqFt",
@@ -600,7 +639,8 @@ def main():
                                 )
                             except Exception as metric_error:
                                 st.metric("Total Predicted SqFt", "Error")
-                                print(f"❌ Error calculating total: {metric_error}")
+                                print(
+                                    f"❌ Error calculating total: {metric_error}")
                             st.markdown('</div>', unsafe_allow_html=True)
                         with col4:
                             st.markdown('<div class="metric-container">',
@@ -621,30 +661,95 @@ def main():
                                 st.metric("Avg Error", "N/A")
                             st.markdown('</div>', unsafe_allow_html=True)
 
-                        # Show results table
+                        # Show results table using a different approach
                         st.subheader("📊 Complete Results Table")
-                        st.dataframe(results_df, width='stretch')
+
+                        # Instead of using st.dataframe, let's create a custom display
+                        try:
+                            # Create a simple table using st.table which is more robust
+                            display_columns = [
+                                'Name', 'City', 'State', 'Predicted_SqFt', 'Data_Source']
+                            available_columns = [
+                                col for col in display_columns if col in results_df.columns]
+
+                            if available_columns:
+                                simple_df = results_df[available_columns].copy(
+                                )
+
+                                # Format the Predicted_SqFt column for better display
+                                if 'Predicted_SqFt' in simple_df.columns:
+                                    simple_df['Predicted_SqFt'] = simple_df['Predicted_SqFt'].apply(
+                                        lambda x: f"{float(x):,.0f}" if pd.notna(
+                                            x) else "N/A"
+                                    )
+
+                                # Use st.table instead of st.dataframe
+                                st.table(simple_df)
+
+                                # Also provide download option
+                                csv_data = results_df.to_csv(index=False)
+                                st.download_button(
+                                    label="📥 Download Complete Results CSV",
+                                    data=csv_data,
+                                    file_name="roof_predictions_complete.csv",
+                                    mime="text/csv"
+                                )
+                            else:
+                                st.error("❌ No displayable columns found")
+
+                        except Exception as e:
+                            st.error(f"❌ Error displaying results: {str(e)}")
+                            print(f"❌ Display error: {e}")
+
+                            # Last resort: show just the summary
+                            st.info("📊 **Results Summary:**")
+                            st.write(
+                                f"- **Total Addresses Processed:** {len(results_df)}")
+                            if 'Predicted_SqFt' in results_df.columns:
+                                avg_sqft = results_df['Predicted_SqFt'].mean()
+                                total_sqft = results_df['Predicted_SqFt'].sum()
+                                st.write(
+                                    f"- **Average Predicted SqFt:** {avg_sqft:,.0f}")
+                                st.write(
+                                    f"- **Total Predicted SqFt:** {total_sqft:,.0f}")
+
+                            # Provide download option even if display fails
+                            try:
+                                csv_data = results_df.to_csv(index=False)
+                                st.download_button(
+                                    label="📥 Download Results CSV",
+                                    data=csv_data,
+                                    file_name="roof_predictions.csv",
+                                    mime="text/csv"
+                                )
+                            except Exception as e2:
+                                st.error(f"❌ Download also failed: {str(e2)}")
 
                         # Show simplified preview table
                         st.subheader(
                             "🏠 Simple Preview (Address + Final Roof Area)")
 
-                        # Create preview with Address, Final Roof Area, and Data Source
-                        preview_columns = [
-                            'Full_Address', 'Sq_Ft', 'Data_Source']
-                        if all(col in results_df.columns for col in preview_columns):
-                            simplified_preview = results_df[preview_columns].copy(
-                            )
-                            simplified_preview.columns = [
-                                'Address', 'Roof Area (sq ft)', 'Data Source']
-                            st.dataframe(simplified_preview,
-                                         width='stretch')
-                            st.caption(
-                                "Shows final roof area (real data or AI prediction) and data source")
-                        else:
+                        try:
+                            # Create preview with Address, Final Roof Area, and Data Source
+                            preview_columns = [
+                                'Full_Address', 'Sq_Ft', 'Data_Source']
+                            if all(col in results_df.columns for col in preview_columns):
+                                simplified_preview = results_df[preview_columns].copy(
+                                )
+                                simplified_preview.columns = [
+                                    'Address', 'Roof Area (sq ft)', 'Data Source']
+
+                                # Use st.table instead of st.dataframe
+                                st.table(simplified_preview)
+                                st.caption(
+                                    "Shows final roof area (real data or AI prediction) and data source")
+                            else:
+                                st.error(
+                                    f"❌ Required columns not found. Available columns: {list(results_df.columns)}")
+                        except Exception as e:
                             st.error(
-                                f"❌ Required columns not found. Available columns: {list(results_df.columns)}")
-                            return
+                                f"❌ Error displaying preview table: {str(e)}")
+                            print(f"❌ Preview table error: {e}")
 
                         # Download results
                         csv_data = results_df.to_csv(index=False)
