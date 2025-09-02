@@ -730,22 +730,22 @@ def main():
                             "🏠 Simple Preview (Address + Final Roof Area)")
 
                         try:
-                        # Create preview with Address, Final Roof Area, and Data Source
-                        preview_columns = [
-                            'Full_Address', 'Sq_Ft', 'Data_Source']
-                        if all(col in results_df.columns for col in preview_columns):
-                            simplified_preview = results_df[preview_columns].copy(
-                            )
-                            simplified_preview.columns = [
+                            # Create preview with Address, Final Roof Area, and Data Source
+                            preview_columns = [
+                                'Full_Address', 'Sq_Ft', 'Data_Source']
+                            if all(col in results_df.columns for col in preview_columns):
+                                simplified_preview = results_df[preview_columns].copy(
+                                )
+                                simplified_preview.columns = [
                                 'Address', 'Roof Area (sq ft)', 'Data Source']
 
                                 # Use st.table instead of st.dataframe
                                 st.table(simplified_preview)
-                            st.caption(
-                                "Shows final roof area (real data or AI prediction) and data source")
-                        else:
-                            st.error(
-                                f"❌ Required columns not found. Available columns: {list(results_df.columns)}")
+                                st.caption(
+                                    "Shows final roof area (real data or AI prediction) and data source")
+                            else:
+                                st.error(
+                                    f"❌ Required columns not found. Available columns: {list(results_df.columns)}")
                         except Exception as e:
                             st.error(
                                 f"❌ Error displaying preview table: {str(e)}")
