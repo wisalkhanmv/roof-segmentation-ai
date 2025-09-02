@@ -143,16 +143,16 @@ def load_trained_model():
                     filename="best_model.ckpt",
                     cache_dir="checkpoints"
                 )
-
-            # Load model
-            model_config = {
-                'model_name': 'unet',
-                'backbone': 'resnet34',
-                'classes': 1,
-                'encoder_weights': 'imagenet'
-            }
-            model = create_model(model_config)
-
+        
+        # Load model
+        model_config = {
+            'model_name': 'unet',
+            'backbone': 'resnet34',
+            'classes': 1,
+            'encoder_weights': 'imagenet'
+        }
+        model = create_model(model_config)
+        
             # Load checkpoint with proper error handling for PyTorch 2.6+
             try:
                 # First try with weights_only=True (secure)
@@ -165,28 +165,28 @@ def load_trained_model():
                         model_path, map_location='cpu', weights_only=False)
                 except Exception as e2:
                     return None, "Demo Mode"
-
-            if 'state_dict' in checkpoint:
-                state_dict = checkpoint['state_dict']
-                new_state_dict = {}
-                for key, value in state_dict.items():
-                    if key.startswith('model.'):
-                        new_key = key[6:]
-                        new_state_dict[new_key] = value
-                    else:
-                        new_state_dict[key] = value
-                model.load_state_dict(new_state_dict)
-            else:
-                model.load_state_dict(checkpoint)
-
-            model.eval()
+        
+        if 'state_dict' in checkpoint:
+            state_dict = checkpoint['state_dict']
+            new_state_dict = {}
+            for key, value in state_dict.items():
+                if key.startswith('model.'):
+                    new_key = key[6:]
+                    new_state_dict[new_key] = value
+                else:
+                    new_state_dict[key] = value
+            model.load_state_dict(new_state_dict)
+        else:
+            model.load_state_dict(checkpoint)
+        
+        model.eval()
             st.session_state.trained_model = model
             return model, "Hugging Face Model"
 
         except Exception as download_error:
             # Fall back to demo mode silently
             return None, "Demo Mode"
-
+        
     except Exception as e:
         st.error(f"Error loading model: {e}")
         st.info("📝 Using demo mode with synthetic predictions.")
@@ -198,17 +198,17 @@ def process_csv_data(uploaded_file):
     try:
         # Read CSV
         df = pd.read_csv(uploaded_file)
-
+        
         # Check required columns
         required_columns = ['Name', 'Full_Address', 'City', 'State']
         missing_columns = [
             col for col in required_columns if col not in df.columns]
-
+        
         if missing_columns:
             st.error(f"❌ Missing required columns: {missing_columns}")
             st.info("📝 Your CSV should include: Name, Full_Address, City, State")
             return None
-
+        
         # Data quality check
         data_issues = []
 
@@ -289,9 +289,9 @@ def process_csv_data(uploaded_file):
             df['Has_Real_Data'] = False
             st.info(
                 "No existing roof data found. Will use AI predictions for all rows.")
-
+        
         return df
-
+        
     except Exception as e:
         st.error(f"❌ Error processing CSV: {e}")
         st.info("💡 **Common CSV issues and solutions:**")
@@ -318,13 +318,13 @@ def generate_predictions_for_all_addresses(model, companies_df):
 
     print(f"📊 DataFrame shape: {companies_df.shape}")
     print(f"📊 DataFrame columns: {list(companies_df.columns)}")
-
+    
     results = []
-
+    
     # Progress tracking
     progress_bar = st.progress(0)
     status_text = st.empty()
-
+    
     for i, company in companies_df.iterrows():
         # Safe address display with null checking
         address = company.get('Full_Address', '')
@@ -356,53 +356,53 @@ def generate_predictions_for_all_addresses(model, companies_df):
             # Generate synthetic prediction as fallback
             synthetic_image = np.random.randint(
                 0, 255, (512, 512, 3), dtype=np.uint8)
-
-            # Preprocess image
-            image_normalized = synthetic_image.astype(np.float32) / 255.0
+        
+        # Preprocess image
+        image_normalized = synthetic_image.astype(np.float32) / 255.0
             image_normalized = (image_normalized -
                                 [0.485, 0.456, 0.406]) / [0.229, 0.224, 0.225]
-
-            # Convert to tensor
+        
+        # Convert to tensor
             image_tensor = torch.from_numpy(image_normalized).permute(
                 2, 0, 1).unsqueeze(0).float()
-
-            # Run inference
-            with torch.no_grad():
-                prediction = model(image_tensor)
-                prediction_sigmoid = torch.sigmoid(prediction)
-                prediction_binary = (prediction_sigmoid > 0.5).float()
-
-            # Convert to numpy
-            pred_mask = prediction_binary.squeeze().numpy()
-
-            # Calculate predicted roof area
-            predicted_pixels = np.sum(pred_mask > 0.5)
-            total_pixels = pred_mask.shape[0] * pred_mask.shape[1]
-            predicted_area_ratio = predicted_pixels / total_pixels
-
-            # Estimate predicted square footage (assuming 512x512 = 1 sq mile = 27,878,400 sq ft)
+        
+        # Run inference
+        with torch.no_grad():
+            prediction = model(image_tensor)
+            prediction_sigmoid = torch.sigmoid(prediction)
+            prediction_binary = (prediction_sigmoid > 0.5).float()
+        
+        # Convert to numpy
+        pred_mask = prediction_binary.squeeze().numpy()
+        
+        # Calculate predicted roof area
+        predicted_pixels = np.sum(pred_mask > 0.5)
+        total_pixels = pred_mask.shape[0] * pred_mask.shape[1]
+        predicted_area_ratio = predicted_pixels / total_pixels
+        
+        # Estimate predicted square footage (assuming 512x512 = 1 sq mile = 27,878,400 sq ft)
             estimated_sqft_per_pixel = 27878400 / \
                 (512 * 512)  # sq ft per pixel
-            predicted_sqft = predicted_pixels * estimated_sqft_per_pixel
-
-            # Create result row - keep ALL original columns and add prediction
-            result_row = company.copy()
+        predicted_sqft = predicted_pixels * estimated_sqft_per_pixel
+        
+        # Create result row - keep ALL original columns and add prediction
+        result_row = company.copy()
             result_row['Final_Roof_Area_SqFt'] = predicted_sqft
             # Formatted with commas
             result_row['Sq_Ft'] = f"{predicted_sqft:,.0f}"
             result_row['Data_Source'] = 'AI Prediction'
-            result_row['Predicted_SqFt'] = predicted_sqft
-            result_row['Predicted_Area_Ratio'] = predicted_area_ratio
-            result_row['Predicted_Pixels'] = predicted_pixels
-
+        result_row['Predicted_SqFt'] = predicted_sqft
+        result_row['Predicted_Area_Ratio'] = predicted_area_ratio
+        result_row['Predicted_Pixels'] = predicted_pixels
+        
         results.append(result_row)
-
+        
         # Update progress
         progress_bar.progress((i + 1) / len(companies_df))
-
+    
     progress_bar.empty()
     status_text.empty()
-
+    
     print(f"✅ Completed processing. Generated {len(results)} predictions")
     if len(results) > 0:
         print(f"📊 Sample result keys: {list(results[0].keys())}")
@@ -412,16 +412,16 @@ def generate_predictions_for_all_addresses(model, companies_df):
 
 def main():
     """Main Streamlit application"""
-
+    
     # Header
     st.markdown('<h1 class="main-header">🏠 Roof Segmentation AI</h1>',
                 unsafe_allow_html=True)
     st.markdown(
         "### Simple CSV Processor - Add Predicted Square Footage to Each Address")
-
+    
     # Sidebar
     st.sidebar.title("🔧 Configuration")
-
+    
     # Model status
     st.sidebar.markdown("### 🤖 AI Model")
 
@@ -431,10 +431,10 @@ def main():
         model = st.session_state.trained_model
         checkpoint_name = "Session Model"
     else:
-        # Load model
-        with st.spinner("Loading AI model..."):
-            model, checkpoint_name = load_trained_model()
-
+    # Load model
+    with st.spinner("Loading AI model..."):
+        model, checkpoint_name = load_trained_model()
+    
     # Show model status
     if checkpoint_name == "Demo Mode":
         st.sidebar.warning("⚠️ Demo Mode")
@@ -448,7 +448,7 @@ def main():
     st.sidebar.markdown("**Type**: AI-powered roof segmentation")
     st.sidebar.markdown("**Input**: Aerial imagery")
     st.sidebar.markdown("**Output**: Roof area predictions")
-
+    
     # Main content
     st.markdown("---")
 
@@ -459,12 +459,12 @@ def main():
         st.success("✅ **AI Mode**: Real AI model loaded and ready!")
 
     st.markdown("---")
-
+    
     # File upload section
     st.subheader("📁 Upload Your CSV Data")
     st.markdown(
         "Upload a CSV file with company addresses. The app will add a 'Predicted_SqFt' column for each location.")
-
+    
     # Enhanced upload area
     st.markdown('<div class="upload-section">', unsafe_allow_html=True)
     uploaded_file = st.file_uploader(
@@ -473,15 +473,15 @@ def main():
         help="Upload a CSV file with columns: Name, Full_Address, City, State, Roof 10k (optional)"
     )
     st.markdown('</div>', unsafe_allow_html=True)
-
+    
     if uploaded_file is not None:
         # Process CSV
         with st.spinner("Processing CSV data..."):
             companies_df = process_csv_data(uploaded_file)
-
+        
         if companies_df is not None:
             st.success(f"✅ Successfully loaded {len(companies_df)} addresses")
-
+            
             # Show data summary in a clean container
             st.markdown('<div class="results-section">',
                         unsafe_allow_html=True)
@@ -508,81 +508,83 @@ def main():
                 st.metric("Cities", companies_df['City'].nunique())
                 st.markdown('</div>', unsafe_allow_html=True)
             st.markdown('</div>', unsafe_allow_html=True)
-
+            
             # Generate predictions button
             st.subheader("🚀 Generate AI Predictions")
             st.markdown(
                 "Click the button below to add predicted square footage for ALL addresses in your CSV.")
-
+            
             if st.button("🤖 Generate Predictions for All Addresses", type="primary"):
                 # Generate predictions for ALL addresses
                 try:
-                    with st.spinner(f"Generating AI predictions for {len(companies_df)} addresses..."):
+                with st.spinner(f"Generating AI predictions for {len(companies_df)} addresses..."):
                         results = generate_predictions_for_all_addresses(
                             model, companies_df)
-
-                    if results:
-                        # Convert to DataFrame
-                        results_df = pd.DataFrame(results)
-                        
-                        # Display results
+                
+                if results:
+                    # Convert to DataFrame
+                    results_df = pd.DataFrame(results)
+                    
+                    # Display results
                         st.markdown('<div class="results-section">',
                                     unsafe_allow_html=True)
-                        st.subheader("🎯 Results - All Addresses with Predictions")
-
+                        st.subheader(
+                            "🎯 Results - All Addresses with Predictions")
+                    
                         # Show summary metrics
-                        col1, col2, col3, col4 = st.columns(4)
-
-                        with col1:
+                    col1, col2, col3, col4 = st.columns(4)
+                    
+                    with col1:
                             st.markdown('<div class="metric-container">',
                                         unsafe_allow_html=True)
-                            st.metric(
-                                "Total Addresses Processed",
-                                len(results_df)
-                            )
+                        st.metric(
+                            "Total Addresses Processed",
+                            len(results_df)
+                        )
                             st.markdown('</div>', unsafe_allow_html=True)
-
-                        with col2:
+                    
+                    with col2:
                             st.markdown('<div class="metric-container">',
                                         unsafe_allow_html=True)
-                            avg_predicted = results_df['Predicted_SqFt'].mean()
-                            st.metric(
-                                "Average Predicted SqFt",
-                                f"{avg_predicted:,.0f}"
-                            )
+                        avg_predicted = results_df['Predicted_SqFt'].mean()
+                        st.metric(
+                            "Average Predicted SqFt",
+                            f"{avg_predicted:,.0f}"
+                        )
                             st.markdown('</div>', unsafe_allow_html=True)
-
-                        with col3:
+                    
+                    with col3:
                             st.markdown('<div class="metric-container">',
                                         unsafe_allow_html=True)
-                            total_predicted = results_df['Predicted_SqFt'].sum()
-                            st.metric(
-                                "Total Predicted SqFt",
-                                f"{total_predicted:,.0f}"
+                            total_predicted = results_df['Predicted_SqFt'].sum(
                             )
+                        st.metric(
+                            "Total Predicted SqFt",
+                            f"{total_predicted:,.0f}"
+                        )
                             st.markdown('</div>', unsafe_allow_html=True)
-
-                        with col4:
+                    
+                    with col4:
                             st.markdown('<div class="metric-container">',
                                         unsafe_allow_html=True)
-                            if 'Roof_SqFt_Real' in results_df.columns:
+                        if 'Roof_SqFt_Real' in results_df.columns:
                                 valid_comparisons = results_df[results_df['Roof_SqFt_Real'].notna(
                                 )]
-                                if len(valid_comparisons) > 0:
+                            if len(valid_comparisons) > 0:
                                     avg_error = (
                                         valid_comparisons['Predicted_SqFt'] - valid_comparisons['Roof_SqFt_Real']).abs().mean()
-                                    st.metric(
-                                        "Avg Error (vs Real)",
-                                        f"{avg_error:,.0f}"
-                                    )
-                                else:
-                                    st.metric("Avg Error", "N/A")
+                                st.metric(
+                                    "Avg Error (vs Real)",
+                                    f"{avg_error:,.0f}"
+                                )
                             else:
                                 st.metric("Avg Error", "N/A")
+                        else:
+                            st.metric("Avg Error", "N/A")
                             st.markdown('</div>', unsafe_allow_html=True)
-
-                        # Show results table
-                        st.subheader("📊 Complete Results Table")
+                    
+                    # Show results table
+                    st.subheader("📊 Complete Results Table")
                         st.dataframe(results_df, width='stretch')
 
                         # Show simplified preview table
@@ -590,9 +592,11 @@ def main():
                             "🏠 Simple Preview (Address + Final Roof Area)")
 
                         # Create preview with Address, Final Roof Area, and Data Source
-                        preview_columns = ['Full_Address', 'Sq_Ft', 'Data_Source']
+                        preview_columns = [
+                            'Full_Address', 'Sq_Ft', 'Data_Source']
                         if all(col in results_df.columns for col in preview_columns):
-                            simplified_preview = results_df[preview_columns].copy()
+                            simplified_preview = results_df[preview_columns].copy(
+                            )
                             simplified_preview.columns = [
                                 'Address', 'Roof Area (sq ft)', 'Data Source']
                             st.dataframe(simplified_preview,
@@ -603,20 +607,21 @@ def main():
                             st.error(
                                 f"❌ Required columns not found. Available columns: {list(results_df.columns)}")
                             return
-
-                        # Download results
-                        csv_data = results_df.to_csv(index=False)
-                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-                        st.download_button(
-                            label="📥 Download Complete CSV with Predictions",
-                            data=csv_data,
-                            file_name=f"roof_predictions_complete_{timestamp}.csv",
-                            mime="text/csv"
-                        )
-
+                    
+                    # Download results
+                    csv_data = results_df.to_csv(index=False)
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    
+                    st.download_button(
+                        label="📥 Download Complete CSV with Predictions",
+                        data=csv_data,
+                        file_name=f"roof_predictions_complete_{timestamp}.csv",
+                        mime="text/csv"
+                    )
+                    
                         # Download simplified CSV with Address and Final Roof Area
-                        export_columns = ['Full_Address', 'Sq_Ft', 'Data_Source']
+                        export_columns = [
+                            'Full_Address', 'Sq_Ft', 'Data_Source']
                         if all(col in results_df.columns for col in export_columns):
                             simplified_df = results_df[export_columns].copy()
                             simplified_df.columns = [
@@ -635,20 +640,20 @@ def main():
                             return
 
                         st.markdown('</div>', unsafe_allow_html=True)
-
-                        # Insights
+                    
+                    # Insights
                         st.markdown('<div class="results-section">',
                                     unsafe_allow_html=True)
-                        st.subheader("💡 What You Got")
-
+                    st.subheader("💡 What You Got")
+                    
                         # Count data sources
                         real_data_count = len(
                             results_df[results_df['Data_Source'] == 'Real Data'])
                         ai_prediction_count = len(
                             results_df[results_df['Data_Source'] == 'AI Prediction'])
 
-                        st.markdown(f"""
-                        <div class="success-box">
+                    st.markdown(f"""
+                    <div class="success-box">
                             <h4>✅ CSV Data Processing Complete</h4>
                             <p><strong>All {len(results_df)} addresses</strong> processed successfully.</p>
                             <p><strong>Data Sources:</strong></p>
@@ -661,23 +666,25 @@ def main():
                                 <li><strong>Address</strong>: Full address from your CSV</li>
                                 <li><strong>Roof Area (sq ft)</strong>: Final roof area (real data or AI prediction)</li>
                                 <li><strong>Data Source</strong>: Shows whether data came from real values or AI prediction</li>
-                            </ul>
+                        </ul>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    if 'Roof_SqFt_Real' in results_df.columns:
+                        st.markdown(f"""
+                        <div class="info-box">
+                            <h4>📊 Comparison with Real Data</h4>
+                            <p>Your CSV included real roof measurements for comparison. The AI predictions can be compared against these values to assess accuracy.</p>
+                            <p><strong>Note:</strong> Current predictions use synthetic images. For production use, you'll need actual aerial imagery for each address.</p>
                         </div>
                         """, unsafe_allow_html=True)
-
-                        if 'Roof_SqFt_Real' in results_df.columns:
-                            st.markdown(f"""
-                            <div class="info-box">
-                                <h4>📊 Comparison with Real Data</h4>
-                                <p>Your CSV included real roof measurements for comparison. The AI predictions can be compared against these values to assess accuracy.</p>
-                                <p><strong>Note:</strong> Current predictions use synthetic images. For production use, you'll need actual aerial imagery for each address.</p>
-                            </div>
-                            """, unsafe_allow_html=True)
-
+    
                         st.markdown('</div>', unsafe_allow_html=True)
-                else:
-                    st.warning("⚠️ No results generated. Please check the console for error messages.")
-                    st.info("💡 Make sure your CSV file has the required columns: 'Full_Address', 'Name', 'City', 'State'")
+                    else:
+                        st.warning(
+                            "⚠️ No results generated. Please check the console for error messages.")
+                        st.info(
+                            "💡 Make sure your CSV file has the required columns: 'Full_Address', 'Name', 'City', 'State'")
                 except Exception as e:
                     st.error(f"❌ Error generating predictions: {str(e)}")
                     st.info("💡 **Common causes and solutions:**")
