@@ -423,10 +423,10 @@ def generate_predictions_for_all_addresses(model, companies_df):
         result_row['Final_Roof_Area_SqFt'] = predicted_sqft
         # Formatted with commas
         result_row['Sq_Ft'] = f"{predicted_sqft:,.0f}"
-            result_row['Data_Source'] = data_source
-            result_row['Predicted_SqFt'] = float(predicted_sqft)
-            result_row['Predicted_Area_Ratio'] = float(predicted_area_ratio)
-            result_row['Predicted_Pixels'] = int(predicted_pixels)
+        result_row['Data_Source'] = data_source
+        result_row['Predicted_SqFt'] = float(predicted_sqft)
+        result_row['Predicted_Area_Ratio'] = float(predicted_area_ratio)
+        result_row['Predicted_Pixels'] = int(predicted_pixels)
 
         results.append(result_row)
 
