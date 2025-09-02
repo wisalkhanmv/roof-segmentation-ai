@@ -431,9 +431,9 @@ def main():
         model = st.session_state.trained_model
         checkpoint_name = "Session Model"
     else:
-    # Load model
-    with st.spinner("Loading AI model..."):
-        model, checkpoint_name = load_trained_model()
+        # Load model
+        with st.spinner("Loading AI model..."):
+            model, checkpoint_name = load_trained_model()
 
     # Show model status
     if checkpoint_name == "Demo Mode":
