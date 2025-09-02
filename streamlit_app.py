@@ -359,12 +359,12 @@ def generate_predictions_for_all_addresses(model, companies_df):
 
         # Preprocess image
         image_normalized = synthetic_image.astype(np.float32) / 255.0
-            image_normalized = (image_normalized -
-                                [0.485, 0.456, 0.406]) / [0.229, 0.224, 0.225]
+        image_normalized = (image_normalized -
+                            [0.485, 0.456, 0.406]) / [0.229, 0.224, 0.225]
 
         # Convert to tensor
-            image_tensor = torch.from_numpy(image_normalized).permute(
-                2, 0, 1).unsqueeze(0).float()
+        image_tensor = torch.from_numpy(image_normalized).permute(
+            2, 0, 1).unsqueeze(0).float()
 
         # Run inference
         with torch.no_grad():
