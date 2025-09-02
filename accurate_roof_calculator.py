@@ -29,25 +29,26 @@ class AccurateRoofCalculator:
     """
     Calculate roof area using real aerial imagery from various providers
     """
-    
+
     def __init__(self):
         self.google_api_key = os.getenv('GOOGLE_MAPS_API_KEY')
         self.mapbox_api_key = os.getenv('MAPBOX_API_KEY')
         self.bing_api_key = os.getenv('BING_MAPS_API_KEY')
         self.default_provider = os.getenv('DEFAULT_API_PROVIDER', 'google')
         self.image_size = int(os.getenv('IMAGE_SIZE', 512))
-        self.confidence_threshold = float(os.getenv('ROOF_DETECTION_CONFIDENCE', 0.5))
-        
+        self.confidence_threshold = float(
+            os.getenv('ROOF_DETECTION_CONFIDENCE', 0.5))
+
         # Initialize geocoder
         self.geolocator = Nominatim(user_agent="roof_calculator")
-    
+
     def geocode_address(self, address: str) -> Optional[Tuple[float, float]]:
         """
         Convert address to latitude and longitude coordinates
-        
+
         Args:
             address: Full address string
-            
+
         Returns:
             Tuple of (latitude, longitude) or None if geocoding fails
         """
@@ -61,23 +62,23 @@ class AccurateRoofCalculator:
         except (GeocoderTimedOut, GeocoderServiceError) as e:
             logger.error(f"Geocoding error for {address}: {e}")
             return None
-    
+
     def get_google_satellite_image(self, lat: float, lon: float, zoom: int = 20) -> Optional[np.ndarray]:
         """
         Get satellite image from Google Maps API
-        
+
         Args:
             lat: Latitude
             lon: Longitude
             zoom: Zoom level (higher = more detail)
-            
+
         Returns:
             Image as numpy array or None if failed
         """
         if not self.google_api_key:
             logger.error("Google Maps API key not provided")
             return None
-        
+
         try:
             # Google Maps Static API URL
             url = f"https://maps.googleapis.com/maps/api/staticmap"
@@ -88,82 +89,85 @@ class AccurateRoofCalculator:
                 'maptype': 'satellite',
                 'key': self.google_api_key
             }
-            
+
             response = requests.get(url, params=params, timeout=30)
             response.raise_for_status()
-            
+
             # Convert to numpy array
             image = Image.open(io.BytesIO(response.content))
             image_array = np.array(image)
-            
-            logger.info(f"Successfully retrieved Google satellite image for {lat}, {lon}")
+
+            logger.info(
+                f"Successfully retrieved Google satellite image for {lat}, {lon}")
             return image_array
-            
+
         except Exception as e:
             logger.error(f"Error getting Google satellite image: {e}")
             return None
-    
+
     def get_mapbox_satellite_image(self, lat: float, lon: float, zoom: int = 20) -> Optional[np.ndarray]:
         """
         Get satellite image from Mapbox API
-        
+
         Args:
             lat: Latitude
             lon: Longitude
             zoom: Zoom level
-            
+
         Returns:
             Image as numpy array or None if failed
         """
         if not self.mapbox_api_key:
             logger.error("Mapbox API key not provided")
             return None
-        
+
         try:
             # Convert lat/lon to Mapbox tile coordinates
             import math
-            
+
             # Convert to tile coordinates
             n = 2.0 ** zoom
             x = int((lon + 180.0) / 360.0 * n)
-            y = int((1.0 - math.asinh(math.tan(math.radians(lat))) / math.pi) / 2.0 * n)
-            
+            y = int(
+                (1.0 - math.asinh(math.tan(math.radians(lat))) / math.pi) / 2.0 * n)
+
             # Mapbox Static Images API
             url = f"https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/{lon},{lat},{zoom},0/{self.image_size}x{self.image_size}@2x"
             params = {
                 'access_token': self.mapbox_api_key
             }
-            
+
             response = requests.get(url, params=params, timeout=30)
             response.raise_for_status()
-            
+
             # Convert to numpy array
             image = Image.open(io.BytesIO(response.content))
             image_array = np.array(image)
-            
-            logger.info(f"Successfully retrieved Mapbox satellite image for {lat}, {lon}")
+
+            logger.info(
+                f"Successfully retrieved Mapbox satellite image for {lat}, {lon}")
             return image_array
-            
+
         except Exception as e:
             logger.error(f"Error getting Mapbox satellite image: {e}")
             return None
-    
+
     def get_bing_satellite_image(self, lat: float, lon: float, zoom: int = 20) -> Optional[np.ndarray]:
         """
         Get satellite image from Bing Maps API
-        
+
         Args:
             lat: Latitude
             lon: Longitude
             zoom: Zoom level
-            
+
         Returns:
             Image as numpy array or None if failed
         """
         if not self.bing_api_key:
             logger.error("Bing Maps API key not provided")
             return None
-        
+
         try:
             # Bing Maps REST Services API
             url = "https://dev.virtualearth.net/REST/v1/Imagery/Map/Aerial"
@@ -173,36 +177,37 @@ class AccurateRoofCalculator:
                 'mapSize': f"{self.image_size},{self.image_size}",
                 'key': self.bing_api_key
             }
-            
+
             response = requests.get(url, params=params, timeout=30)
             response.raise_for_status()
-            
+
             # Convert to numpy array
             image = Image.open(io.BytesIO(response.content))
             image_array = np.array(image)
-            
-            logger.info(f"Successfully retrieved Bing satellite image for {lat}, {lon}")
+
+            logger.info(
+                f"Successfully retrieved Bing satellite image for {lat}, {lon}")
             return image_array
-            
+
         except Exception as e:
             logger.error(f"Error getting Bing satellite image: {e}")
             return None
-    
+
     def get_satellite_image(self, lat: float, lon: float, provider: str = None) -> Optional[np.ndarray]:
         """
         Get satellite image from specified provider or try multiple providers
-        
+
         Args:
             lat: Latitude
             lon: Longitude
             provider: API provider ('google', 'mapbox', 'bing')
-            
+
         Returns:
             Image as numpy array or None if all providers fail
         """
         if provider is None:
             provider = self.default_provider
-        
+
         # Try the specified provider first
         if provider == 'google':
             image = self.get_google_satellite_image(lat, lon)
@@ -213,13 +218,13 @@ class AccurateRoofCalculator:
         else:
             logger.error(f"Unknown provider: {provider}")
             return None
-        
+
         if image is not None:
             return image
-        
+
         # If the specified provider failed, try others
         logger.info(f"Provider {provider} failed, trying alternatives...")
-        
+
         for alt_provider in ['google', 'mapbox', 'bing']:
             if alt_provider != provider:
                 if alt_provider == 'google':
@@ -228,21 +233,22 @@ class AccurateRoofCalculator:
                     image = self.get_mapbox_satellite_image(lat, lon)
                 elif alt_provider == 'bing':
                     image = self.get_bing_satellite_image(lat, lon)
-                
+
                 if image is not None:
-                    logger.info(f"Successfully used {alt_provider} as fallback")
+                    logger.info(
+                        f"Successfully used {alt_provider} as fallback")
                     return image
-        
+
         logger.error("All satellite image providers failed")
         return None
-    
+
     def detect_roof_areas(self, image: np.ndarray) -> Tuple[np.ndarray, float]:
         """
         Detect roof areas in satellite image using computer vision techniques
-        
+
         Args:
             image: Satellite image as numpy array
-            
+
         Returns:
             Tuple of (binary mask, confidence score)
         """
@@ -252,27 +258,28 @@ class AccurateRoofCalculator:
                 gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
             else:
                 gray = image
-            
+
             # Apply Gaussian blur to reduce noise
             blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-            
+
             # Edge detection using Canny
             edges = cv2.Canny(blurred, 50, 150)
-            
+
             # Morphological operations to close gaps
             kernel = np.ones((3, 3), np.uint8)
             closed = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)
-            
+
             # Find contours
-            contours, _ = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            
+            contours, _ = cv2.findContours(
+                closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
             # Create binary mask
             mask = np.zeros_like(gray)
-            
+
             # Filter contours by area and fill them
             min_area = (self.image_size * 0.05) ** 2  # Minimum 5% of image
             max_area = (self.image_size * 0.8) ** 2   # Maximum 80% of image
-            
+
             roof_pixels = 0
             for contour in contours:
                 area = cv2.contourArea(contour)
@@ -283,16 +290,17 @@ class AccurateRoofCalculator:
                     if 0.3 < aspect_ratio < 3.0:  # Reasonable roof aspect ratio
                         cv2.fillPoly(mask, [contour], 255)
                         roof_pixels += area
-            
+
             # Calculate confidence based on detected roof area
             total_pixels = self.image_size * self.image_size
             roof_ratio = roof_pixels / total_pixels
             confidence = min(roof_ratio * 2, 1.0)  # Scale confidence
-            
-            logger.info(f"Detected roof area: {roof_pixels} pixels ({roof_ratio:.2%} of image)")
-            
+
+            logger.info(
+                f"Detected roof area: {roof_pixels} pixels ({roof_ratio:.2%} of image)")
+
             return mask, confidence
-            
+
         except Exception as e:
             logger.error(f"Error in roof detection: {e}")
             # Handle both RGB and grayscale images for error case
@@ -300,16 +308,16 @@ class AccurateRoofCalculator:
                 return np.zeros_like(image[:, :, 0]), 0.0
             else:
                 return np.zeros_like(image), 0.0
-    
+
     def calculate_roof_area_sqft(self, lat: float, lon: float, zoom: int = 20) -> Dict[str, Any]:
         """
         Calculate roof area in square feet for a given location
-        
+
         Args:
             lat: Latitude
             lon: Longitude
             zoom: Zoom level for satellite imagery
-            
+
         Returns:
             Dictionary with roof area information
         """
@@ -324,10 +332,10 @@ class AccurateRoofCalculator:
                     'confidence': 0.0,
                     'method': 'satellite_imagery'
                 }
-            
+
             # Detect roof areas
             roof_mask, confidence = self.detect_roof_areas(image)
-            
+
             # Accept all results regardless of confidence (user requested this)
             # if confidence < self.confidence_threshold:
             #     return {
@@ -337,21 +345,21 @@ class AccurateRoofCalculator:
             #         'confidence': confidence,
             #         'method': 'satellite_imagery'
             #     }
-            
+
             # Calculate roof area in pixels
             roof_pixels = np.sum(roof_mask > 0)
-            
+
             # Convert pixels to square feet
             # At zoom level 20, each pixel represents approximately 0.6 meters
             # This is an approximation and may vary by location
             meters_per_pixel = 0.6 / (2 ** (20 - zoom))
             sq_meters_per_pixel = meters_per_pixel ** 2
             sq_feet_per_pixel = sq_meters_per_pixel * 10.764  # Convert m² to ft²
-            
+
             roof_area_sqft = roof_pixels * sq_feet_per_pixel
-            
+
             logger.info(f"Calculated roof area: {roof_area_sqft:.0f} sq ft")
-            
+
             return {
                 'success': True,
                 'roof_area_sqft': roof_area_sqft,
@@ -361,7 +369,7 @@ class AccurateRoofCalculator:
                 'zoom_level': zoom,
                 'meters_per_pixel': meters_per_pixel
             }
-            
+
         except Exception as e:
             logger.error(f"Error calculating roof area: {e}")
             return {
@@ -371,14 +379,14 @@ class AccurateRoofCalculator:
                 'confidence': 0.0,
                 'method': 'satellite_imagery'
             }
-    
+
     def calculate_roof_area_for_address(self, address: str) -> Dict[str, Any]:
         """
         Calculate roof area for a given address
-        
+
         Args:
             address: Full address string
-            
+
         Returns:
             Dictionary with roof area information
         """
@@ -393,18 +401,18 @@ class AccurateRoofCalculator:
                     'confidence': 0.0,
                     'method': 'satellite_imagery'
                 }
-            
+
             lat, lon = coords
             logger.info(f"Geocoded {address} to {lat}, {lon}")
-            
+
             # Calculate roof area
             result = self.calculate_roof_area_sqft(lat, lon)
             result['address'] = address
             result['latitude'] = lat
             result['longitude'] = lon
-            
+
             return result
-            
+
         except Exception as e:
             logger.error(f"Error processing address {address}: {e}")
             return {
@@ -422,11 +430,11 @@ def test_roof_calculator():
     Test function for the roof calculator
     """
     calculator = AccurateRoofCalculator()
-    
+
     # Test with a sample address
     test_address = "1600 Amphitheatre Parkway, Mountain View, CA"
     result = calculator.calculate_roof_area_for_address(test_address)
-    
+
     print(f"Test result for {test_address}:")
     print(json.dumps(result, indent=2))
 
