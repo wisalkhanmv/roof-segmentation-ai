@@ -311,15 +311,16 @@ def generate_predictions_for_all_addresses(model, companies_df):
     """Generate predictions for all addresses, using real data when available"""
     print(f"🧪 Generating predictions for {len(companies_df)} addresses...")
 
-    # Check if model is valid
-    if model is None:
+    # Check if model is valid (None or string means no real model)
+    if model is None or isinstance(model, str):
         print("❌ No model available - using demo mode")
         # Return demo results with synthetic data
         results = []
         for i, company in companies_df.iterrows():
             result_row = company.copy()
             # Generate synthetic prediction
-            synthetic_sqft = np.random.randint(5000, 50000)  # Random between 5k-50k sqft
+            synthetic_sqft = np.random.randint(
+                5000, 50000)  # Random between 5k-50k sqft
             result_row['Final_Roof_Area_SqFt'] = synthetic_sqft
             result_row['Sq_Ft'] = f"{synthetic_sqft:,.0f}"
             result_row['Data_Source'] = 'Demo Mode'
@@ -458,6 +459,7 @@ def main():
         st.sidebar.warning("⚠️ Demo Mode")
         st.sidebar.info("Using synthetic predictions")
         st.sidebar.error("Model loading failed - using demo data")
+        model = None  # Ensure model is None for demo mode
     else:
         st.sidebar.success(f"✅ {checkpoint_name}")
         st.sidebar.info("Real AI predictions active")
