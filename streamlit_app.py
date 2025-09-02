@@ -376,37 +376,37 @@ def generate_predictions_for_all_addresses(model, companies_df):
         else:
             # Need to predict - use AI model or demo mode
             if model is not None:
-            # Generate synthetic prediction as fallback
-            synthetic_image = np.random.randint(
-                0, 255, (512, 512, 3), dtype=np.uint8)
+                # Generate synthetic prediction as fallback
+                synthetic_image = np.random.randint(
+                    0, 255, (512, 512, 3), dtype=np.uint8)
 
-        # Preprocess image
-        image_normalized = synthetic_image.astype(np.float32) / 255.0
-        image_normalized = (image_normalized -
-                            [0.485, 0.456, 0.406]) / [0.229, 0.224, 0.225]
+                # Preprocess image
+                image_normalized = synthetic_image.astype(np.float32) / 255.0
+                image_normalized = (image_normalized -
+                                    [0.485, 0.456, 0.406]) / [0.229, 0.224, 0.225]
 
-        # Convert to tensor
-        image_tensor = torch.from_numpy(image_normalized).permute(
-            2, 0, 1).unsqueeze(0).float()
+                # Convert to tensor
+                image_tensor = torch.from_numpy(image_normalized).permute(
+                    2, 0, 1).unsqueeze(0).float()
 
-        # Run inference
-        with torch.no_grad():
-            prediction = model(image_tensor)
-            prediction_sigmoid = torch.sigmoid(prediction)
-            prediction_binary = (prediction_sigmoid > 0.5).float()
+                # Run inference
+                with torch.no_grad():
+                    prediction = model(image_tensor)
+                    prediction_sigmoid = torch.sigmoid(prediction)
+                    prediction_binary = (prediction_sigmoid > 0.5).float()
 
-        # Convert to numpy
-        pred_mask = prediction_binary.squeeze().numpy()
+                # Convert to numpy
+                pred_mask = prediction_binary.squeeze().numpy()
 
-        # Calculate predicted roof area
-        predicted_pixels = np.sum(pred_mask > 0.5)
-        total_pixels = pred_mask.shape[0] * pred_mask.shape[1]
-        predicted_area_ratio = predicted_pixels / total_pixels
+                # Calculate predicted roof area
+                predicted_pixels = np.sum(pred_mask > 0.5)
+                total_pixels = pred_mask.shape[0] * pred_mask.shape[1]
+                predicted_area_ratio = predicted_pixels / total_pixels
 
-        # Estimate predicted square footage (assuming 512x512 = 1 sq mile = 27,878,400 sq ft)
-        estimated_sqft_per_pixel = 27878400 / \
-            (512 * 512)  # sq ft per pixel
-        predicted_sqft = predicted_pixels * estimated_sqft_per_pixel
+                # Estimate predicted square footage (assuming 512x512 = 1 sq mile = 27,878,400 sq ft)
+                estimated_sqft_per_pixel = 27878400 / \
+                    (512 * 512)  # sq ft per pixel
+                predicted_sqft = predicted_pixels * estimated_sqft_per_pixel
 
                 data_source = 'AI Prediction'
             else:
