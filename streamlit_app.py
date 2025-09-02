@@ -307,8 +307,18 @@ def process_csv_data(uploaded_file):
         return None
 
 
-def generate_predictions_for_all_addresses(companies_df, model):
+def generate_predictions_for_all_addresses(model, companies_df):
     """Generate predictions for all addresses, using real data when available"""
+    print(f"🧪 Generating predictions for {len(companies_df)} addresses...")
+    
+    # Check if DataFrame is valid
+    if companies_df is None or len(companies_df) == 0:
+        print("❌ No data to process")
+        return []
+    
+    print(f"📊 DataFrame shape: {companies_df.shape}")
+    print(f"📊 DataFrame columns: {list(companies_df.columns)}")
+    
     results = []
 
     # Progress tracking
@@ -393,6 +403,10 @@ def generate_predictions_for_all_addresses(companies_df, model):
     progress_bar.empty()
     status_text.empty()
 
+    print(f"✅ Completed processing. Generated {len(results)} predictions")
+    if len(results) > 0:
+        print(f"📊 Sample result keys: {list(results[0].keys())}")
+    
     return results
 
 
@@ -505,7 +519,7 @@ def main():
                 try:
                     with st.spinner(f"Generating AI predictions for {len(companies_df)} addresses..."):
                         results = generate_predictions_for_all_addresses(
-                            companies_df, model)
+                            model, companies_df)
 
                     if results:
                         # Convert to DataFrame
