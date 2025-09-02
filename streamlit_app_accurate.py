@@ -275,16 +275,17 @@ def main():
         help="Limit the number of addresses to process (useful for testing)"
     )
     
-    confidence_threshold = st.sidebar.slider(
-        "Minimum confidence threshold",
-        min_value=0.0,
-        max_value=1.0,
-        value=0.3,
-        step=0.1,
-        help="Minimum confidence required for roof detection"
-    )
+    # Confidence threshold removed - now accepting all results regardless of confidence
+    # confidence_threshold = st.sidebar.slider(
+    #     "Minimum confidence threshold",
+    #     min_value=0.0,
+    #     max_value=1.0,
+    #     value=0.3,
+    #     step=0.1,
+    #     help="Minimum confidence required for roof detection"
+    # )
     
-    calculator.confidence_threshold = confidence_threshold
+    # calculator.confidence_threshold = confidence_threshold
     
     # Main content
     st.markdown("---")
@@ -396,11 +397,34 @@ def main():
                                 st.metric("Average Confidence", "N/A")
                             st.markdown('</div>', unsafe_allow_html=True)
                         
+                        # Add confidence distribution
+                        if successful > 0:
+                            st.subheader("📊 Confidence Distribution")
+                            conf_data = results_df[results_df['Status'] == 'Success']['Confidence']
+                            
+                            col1, col2, col3, col4 = st.columns(4)
+                            
+                            with col1:
+                                high_conf = len(conf_data[conf_data >= 0.8])
+                                st.metric("🟢 High Confidence (≥0.8)", high_conf)
+                            
+                            with col2:
+                                med_conf = len(conf_data[(conf_data >= 0.5) & (conf_data < 0.8)])
+                                st.metric("🟡 Medium Confidence (0.5-0.8)", med_conf)
+                            
+                            with col3:
+                                low_conf = len(conf_data[(conf_data >= 0.2) & (conf_data < 0.5)])
+                                st.metric("🟠 Low Confidence (0.2-0.5)", low_conf)
+                            
+                            with col4:
+                                very_low_conf = len(conf_data[conf_data < 0.2])
+                                st.metric("🔴 Very Low Confidence (<0.2)", very_low_conf)
+                        
                         # Show results table
                         st.subheader("📊 Results Table")
                         
-                        # Create display table
-                        display_columns = ['Name', 'City', 'State', 'Roof_Area_SqFt', 'Confidence', 'Status']
+                        # Create display table with confidence column
+                        display_columns = ['Name', 'City', 'State', 'Roof_Area_SqFt', 'Confidence', 'Status', 'Error']
                         available_columns = [col for col in display_columns if col in results_df.columns]
                         
                         if available_columns:
@@ -412,13 +436,45 @@ def main():
                                     lambda x: f"{float(x):,.0f}" if pd.notna(x) and x > 0 else "N/A"
                                 )
                             
-                            # Format confidence
+                            # Format confidence with color coding
                             if 'Confidence' in display_df.columns:
-                                display_df['Confidence'] = display_df['Confidence'].apply(
-                                    lambda x: f"{float(x):.2f}" if pd.notna(x) else "N/A"
+                                def format_confidence(x):
+                                    if pd.notna(x):
+                                        conf = float(x)
+                                        if conf >= 0.8:
+                                            return f"🟢 {conf:.2f}"
+                                        elif conf >= 0.5:
+                                            return f"🟡 {conf:.2f}"
+                                        elif conf >= 0.2:
+                                            return f"🟠 {conf:.2f}"
+                                        else:
+                                            return f"🔴 {conf:.2f}"
+                                    return "N/A"
+                                
+                                display_df['Confidence'] = display_df['Confidence'].apply(format_confidence)
+                            
+                            # Format status with emojis
+                            if 'Status' in display_df.columns:
+                                display_df['Status'] = display_df['Status'].apply(
+                                    lambda x: "✅ Success" if x == "Success" else "❌ Failed" if x == "Failed" else "⚠️ Error"
+                                )
+                            
+                            # Show error messages for failed cases
+                            if 'Error' in display_df.columns:
+                                display_df['Error'] = display_df['Error'].apply(
+                                    lambda x: str(x)[:50] + "..." if pd.notna(x) and len(str(x)) > 50 else str(x) if pd.notna(x) else ""
                                 )
                             
                             st.table(display_df)
+                            
+                            # Add confidence legend
+                            st.markdown("""
+                            **Confidence Legend:**
+                            - 🟢 High (0.8-1.0): Very reliable
+                            - 🟡 Medium (0.5-0.8): Good reliability  
+                            - 🟠 Low (0.2-0.5): Moderate reliability
+                            - 🔴 Very Low (0.0-0.2): Low reliability
+                            """)
                         
                         # Download results
                         csv_data = results_df.to_csv(index=False)

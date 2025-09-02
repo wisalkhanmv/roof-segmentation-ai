@@ -1,0 +1,50 @@
+[
+  {
+    "success": true,
+    "roof_area_sqft": 62620.6464,
+    "confidence": 0.11720657348632812,
+    "roof_pixels": 16160,
+    "method": "satellite_imagery",
+    "zoom_level": 20,
+    "meters_per_pixel": 0.6,
+    "address": "1600 Amphitheatre Parkway, Mountain View, CA",
+    "latitude": 37.4224857,
+    "longitude": -122.0855846
+  },
+  {
+    "success": true,
+    "roof_area_sqft": 0.0,
+    "confidence": 0.0,
+    "roof_pixels": 0,
+    "method": "satellite_imagery",
+    "zoom_level": 20,
+    "meters_per_pixel": 0.6,
+    "address": "1 Apple Park Way, Cupertino, CA",
+    "latitude": 37.3303989,
+    "longitude": -122.0081553
+  },
+  {
+    "success": true,
+    "roof_area_sqft": 653075.99136,
+    "confidence": 1.0,
+    "roof_pixels": 168534,
+    "method": "satellite_imagery",
+    "zoom_level": 20,
+    "meters_per_pixel": 0.6,
+    "address": "410 Terry Avenue North, Seattle, WA",
+    "latitude": 47.622298,
+    "longitude": -122.3365001
+  },
+  {
+    "success": true,
+    "roof_area_sqft": 684277.8134399999,
+    "confidence": 1.0,
+    "roof_pixels": 176586,
+    "method": "satellite_imagery",
+    "zoom_level": 20,
+    "meters_per_pixel": 0.6,
+    "address": "1 Hacker Way, Menlo Park, CA",
+    "latitude": 37.484668,
+    "longitude": -122.1483655
+  }
+]

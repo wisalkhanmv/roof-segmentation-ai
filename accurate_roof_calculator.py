@@ -247,8 +247,11 @@ class AccurateRoofCalculator:
             Tuple of (binary mask, confidence score)
         """
         try:
-            # Convert to grayscale
-            gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+            # Convert to grayscale - handle both RGB and grayscale images
+            if len(image.shape) == 3:
+                gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+            else:
+                gray = image
             
             # Apply Gaussian blur to reduce noise
             blurred = cv2.GaussianBlur(gray, (5, 5), 0)
@@ -292,7 +295,11 @@ class AccurateRoofCalculator:
             
         except Exception as e:
             logger.error(f"Error in roof detection: {e}")
-            return np.zeros_like(image[:, :, 0]), 0.0
+            # Handle both RGB and grayscale images for error case
+            if len(image.shape) == 3:
+                return np.zeros_like(image[:, :, 0]), 0.0
+            else:
+                return np.zeros_like(image), 0.0
     
     def calculate_roof_area_sqft(self, lat: float, lon: float, zoom: int = 20) -> Dict[str, Any]:
         """
@@ -321,14 +328,15 @@ class AccurateRoofCalculator:
             # Detect roof areas
             roof_mask, confidence = self.detect_roof_areas(image)
             
-            if confidence < self.confidence_threshold:
-                return {
-                    'success': False,
-                    'error': f'Low confidence in roof detection: {confidence:.2f}',
-                    'roof_area_sqft': 0,
-                    'confidence': confidence,
-                    'method': 'satellite_imagery'
-                }
+            # Accept all results regardless of confidence (user requested this)
+            # if confidence < self.confidence_threshold:
+            #     return {
+            #         'success': False,
+            #         'error': f'Low confidence in roof detection: {confidence:.2f}',
+            #         'roof_area_sqft': 0,
+            #         'confidence': confidence,
+            #         'method': 'satellite_imagery'
+            #     }
             
             # Calculate roof area in pixels
             roof_pixels = np.sum(roof_mask > 0)
