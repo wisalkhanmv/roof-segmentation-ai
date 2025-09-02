@@ -311,6 +311,24 @@ def generate_predictions_for_all_addresses(model, companies_df):
     """Generate predictions for all addresses, using real data when available"""
     print(f"🧪 Generating predictions for {len(companies_df)} addresses...")
 
+    # Check if model is valid
+    if model is None:
+        print("❌ No model available - using demo mode")
+        # Return demo results with synthetic data
+        results = []
+        for i, company in companies_df.iterrows():
+            result_row = company.copy()
+            # Generate synthetic prediction
+            synthetic_sqft = np.random.randint(5000, 50000)  # Random between 5k-50k sqft
+            result_row['Final_Roof_Area_SqFt'] = synthetic_sqft
+            result_row['Sq_Ft'] = f"{synthetic_sqft:,.0f}"
+            result_row['Data_Source'] = 'Demo Mode'
+            result_row['Predicted_SqFt'] = synthetic_sqft
+            result_row['Predicted_Area_Ratio'] = 0.3  # 30% of image
+            result_row['Predicted_Pixels'] = 78643  # Random pixel count
+            results.append(result_row)
+        return results
+
     # Check if DataFrame is valid
     if companies_df is None or len(companies_df) == 0:
         print("❌ No data to process")
@@ -436,9 +454,10 @@ def main():
             model, checkpoint_name = load_trained_model()
 
     # Show model status
-    if checkpoint_name == "Demo Mode":
+    if model is None or checkpoint_name == "Demo Mode":
         st.sidebar.warning("⚠️ Demo Mode")
         st.sidebar.info("Using synthetic predictions")
+        st.sidebar.error("Model loading failed - using demo data")
     else:
         st.sidebar.success(f"✅ {checkpoint_name}")
         st.sidebar.info("Real AI predictions active")
@@ -556,7 +575,8 @@ def main():
                         with col3:
                             st.markdown('<div class="metric-container">',
                                         unsafe_allow_html=True)
-                            total_predicted = results_df['Predicted_SqFt'].sum()
+                            total_predicted = results_df['Predicted_SqFt'].sum(
+                            )
                             st.metric(
                                 "Total Predicted SqFt",
                                 f"{total_predicted:,.0f}"
@@ -566,7 +586,8 @@ def main():
                             st.markdown('<div class="metric-container">',
                                         unsafe_allow_html=True)
                             if 'Roof_SqFt_Real' in results_df.columns:
-                                valid_comparisons = results_df[results_df['Roof_SqFt_Real'].notna()]
+                                valid_comparisons = results_df[results_df['Roof_SqFt_Real'].notna(
+                                )]
                                 if len(valid_comparisons) > 0:
                                     avg_error = (
                                         valid_comparisons['Predicted_SqFt'] - valid_comparisons['Roof_SqFt_Real']).abs().mean()
@@ -697,7 +718,7 @@ def main():
                     - Try uploading a smaller file first
                     - Contact support if the issue persists
                     """)
-    
+
     # Footer
     st.markdown("---")
     st.markdown("""
