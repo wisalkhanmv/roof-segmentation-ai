@@ -171,9 +171,11 @@ def calculate_roof_areas_for_addresses(calculator, companies_df, max_addresses=N
             f"⚠️ Processing only first {max_addresses} addresses for demo purposes")
 
     # Check for existing roof data columns
-    roof_columns = ['Roof 10k', 'Roof 20k', 'Roof_10k', 'Roof_20k', 'Roof_SqFt', 'Roof_SqFt_Real']
-    existing_roof_columns = [col for col in roof_columns if col in companies_df.columns]
-    
+    roof_columns = ['Roof 10k', 'Roof 20k', 'Roof_10k',
+                    'Roof_20k', 'Roof_SqFt', 'Roof_SqFt_Real']
+    existing_roof_columns = [
+        col for col in roof_columns if col in companies_df.columns]
+
     print(f"📊 Found existing roof data columns: {existing_roof_columns}")
 
     # Progress tracking
@@ -197,7 +199,7 @@ def calculate_roof_areas_for_addresses(calculator, companies_df, max_addresses=N
         # Check if we already have roof data
         has_existing_roof_data = False
         existing_roof_area = None
-        
+
         for roof_col in existing_roof_columns:
             roof_value = company.get(roof_col)
             if pd.notna(roof_value) and str(roof_value).strip() != '' and str(roof_value).lower() not in ['nan', 'none', 'null']:
@@ -206,7 +208,8 @@ def calculate_roof_areas_for_addresses(calculator, companies_df, max_addresses=N
                     existing_roof_area = float(roof_value)
                     if existing_roof_area > 0:
                         has_existing_roof_data = True
-                        print(f"✅ Found existing roof data for {name}: {existing_roof_area} sq ft from column '{roof_col}'")
+                        print(
+                            f"✅ Found existing roof data for {name}: {existing_roof_area} sq ft from column '{roof_col}'")
                         break
                 except (ValueError, TypeError):
                     continue
@@ -221,7 +224,8 @@ def calculate_roof_areas_for_addresses(calculator, companies_df, max_addresses=N
             result_row['Longitude'] = None
             result_row['Status'] = 'Success'
             result_row['Error'] = None
-            print(f"📋 Using existing roof data for {name}: {existing_roof_area} sq ft")
+            print(
+                f"📋 Using existing roof data for {name}: {existing_roof_area} sq ft")
         else:
             # Calculate roof area using satellite imagery
             try:
@@ -236,7 +240,8 @@ def calculate_roof_areas_for_addresses(calculator, companies_df, max_addresses=N
                     result_row['Longitude'] = result.get('longitude', None)
                     result_row['Status'] = 'Success'
                     result_row['Error'] = None
-                    print(f"🛰️ Calculated roof area for {name}: {result['roof_area_sqft']} sq ft (confidence: {result['confidence']:.2f})")
+                    print(
+                        f"🛰️ Calculated roof area for {name}: {result['roof_area_sqft']} sq ft (confidence: {result['confidence']:.2f})")
                 else:
                     result_row['Roof_Area_SqFt'] = 0
                     result_row['Confidence'] = 0.0
@@ -246,7 +251,8 @@ def calculate_roof_areas_for_addresses(calculator, companies_df, max_addresses=N
                     result_row['Longitude'] = result.get('longitude', None)
                     result_row['Status'] = 'Failed'
                     result_row['Error'] = result.get('error', 'Unknown error')
-                    print(f"❌ Failed to calculate roof area for {name}: {result.get('error', 'Unknown error')}")
+                    print(
+                        f"❌ Failed to calculate roof area for {name}: {result.get('error', 'Unknown error')}")
 
             except Exception as e:
                 # Handle any unexpected errors
@@ -273,12 +279,15 @@ def calculate_roof_areas_for_addresses(calculator, companies_df, max_addresses=N
     status_text.empty()
 
     # Count how many used existing data vs satellite imagery
-    existing_data_count = len([r for r in results if r.get('Data_Source') == 'Existing CSV Data'])
-    satellite_count = len([r for r in results if r.get('Data_Source', '').startswith('Satellite Imagery')])
-    
+    existing_data_count = len(
+        [r for r in results if r.get('Data_Source') == 'Existing CSV Data'])
+    satellite_count = len([r for r in results if r.get(
+        'Data_Source', '').startswith('Satellite Imagery')])
+
     print(f"✅ Completed processing. Generated {len(results)} results")
-    print(f"📊 Data sources: {existing_data_count} from existing data, {satellite_count} from satellite imagery")
-    
+    print(
+        f"📊 Data sources: {existing_data_count} from existing data, {satellite_count} from satellite imagery")
+
     return results
 
 
@@ -473,21 +482,27 @@ def main():
                         # Add data source distribution
                         st.subheader("📊 Data Source Distribution")
                         if 'Data_Source' in results_df.columns:
-                            data_sources = results_df['Data_Source'].value_counts()
-                            
+                            data_sources = results_df['Data_Source'].value_counts(
+                            )
+
                             col1, col2, col3 = st.columns(3)
-                            
+
                             with col1:
-                                existing_count = data_sources.get('Existing CSV Data', 0)
+                                existing_count = data_sources.get(
+                                    'Existing CSV Data', 0)
                                 st.metric("📋 Existing Data", existing_count)
-                            
+
                             with col2:
-                                satellite_count = data_sources.get('Satellite Imagery', 0)
-                                st.metric("🛰️ Satellite Imagery", satellite_count)
-                            
+                                satellite_count = data_sources.get(
+                                    'Satellite Imagery', 0)
+                                st.metric("🛰️ Satellite Imagery",
+                                          satellite_count)
+
                             with col3:
-                                failed_count = data_sources.get('Satellite Imagery (Failed)', 0) + data_sources.get('Satellite Imagery (Error)', 0)
-                                st.metric("❌ Failed Calculations", failed_count)
+                                failed_count = data_sources.get(
+                                    'Satellite Imagery (Failed)', 0) + data_sources.get('Satellite Imagery (Error)', 0)
+                                st.metric("❌ Failed Calculations",
+                                          failed_count)
 
                         # Add confidence distribution
                         if successful > 0:
@@ -597,10 +612,13 @@ def main():
                         st.subheader("💡 What You Got")
 
                         # Calculate data source statistics
-                        existing_data_count = len([r for r in results_df.to_dict('records') if r.get('Data_Source') == 'Existing CSV Data'])
-                        satellite_data_count = len([r for r in results_df.to_dict('records') if r.get('Data_Source') == 'Satellite Imagery'])
-                        failed_count = len([r for r in results_df.to_dict('records') if r.get('Data_Source', '').startswith('Satellite Imagery (')])
-                        
+                        existing_data_count = len([r for r in results_df.to_dict(
+                            'records') if r.get('Data_Source') == 'Existing CSV Data'])
+                        satellite_data_count = len([r for r in results_df.to_dict(
+                            'records') if r.get('Data_Source') == 'Satellite Imagery'])
+                        failed_count = len([r for r in results_df.to_dict('records') if r.get(
+                            'Data_Source', '').startswith('Satellite Imagery (')])
+
                         st.markdown(f"""
                         <div class="success-box">
                             <h4>✅ Roof Area Analysis Complete</h4>
