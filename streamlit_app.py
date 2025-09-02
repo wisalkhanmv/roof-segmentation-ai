@@ -82,7 +82,7 @@ def load_trained_model():
         # Check if model is already loaded in session state
         if 'trained_model' in st.session_state and st.session_state.trained_model is not None:
             return st.session_state.trained_model, "Loaded from Session"
-        
+
         # Try to load from local checkpoints first
         current_dir = Path(__file__).parent
         best_checkpoint = current_dir / "checkpoints" / "best_model.ckpt"
@@ -100,11 +100,13 @@ def load_trained_model():
             # Load checkpoint with proper error handling for PyTorch 2.6+
             try:
                 # First try with weights_only=True (secure)
-                checkpoint = torch.load(best_checkpoint, map_location='cpu', weights_only=True)
+                checkpoint = torch.load(
+                    best_checkpoint, map_location='cpu', weights_only=True)
             except Exception as e:
                 # If that fails, try with weights_only=False (less secure but works with custom objects)
                 try:
-                    checkpoint = torch.load(best_checkpoint, map_location='cpu', weights_only=False)
+                    checkpoint = torch.load(
+                        best_checkpoint, map_location='cpu', weights_only=False)
                 except Exception as e2:
                     return None, "Demo Mode"
 
@@ -132,7 +134,7 @@ def load_trained_model():
                 from huggingface_hub import hf_hub_download
             except ImportError:
                 return None, "Demo Mode"
-            
+
             # Show download progress
             with st.spinner("📥 Downloading AI model from Hugging Face..."):
                 # Download model from Hugging Face
@@ -141,9 +143,7 @@ def load_trained_model():
                     filename="best_model.ckpt",
                     cache_dir="checkpoints"
                 )
-            
 
-            
             # Load model
             model_config = {
                 'model_name': 'unet',
@@ -156,11 +156,13 @@ def load_trained_model():
             # Load checkpoint with proper error handling for PyTorch 2.6+
             try:
                 # First try with weights_only=True (secure)
-                checkpoint = torch.load(model_path, map_location='cpu', weights_only=True)
+                checkpoint = torch.load(
+                    model_path, map_location='cpu', weights_only=True)
             except Exception as e:
                 # If that fails, try with weights_only=False (less secure but works with custom objects)
                 try:
-                    checkpoint = torch.load(model_path, map_location='cpu', weights_only=False)
+                    checkpoint = torch.load(
+                        model_path, map_location='cpu', weights_only=False)
                 except Exception as e2:
                     return None, "Demo Mode"
 
@@ -191,9 +193,6 @@ def load_trained_model():
         return None, "Demo Mode"
 
 
-
-
-
 def process_csv_data(uploaded_file):
     """Process uploaded CSV data"""
     try:
@@ -212,32 +211,34 @@ def process_csv_data(uploaded_file):
 
         # Data quality check
         data_issues = []
-        
+
         # Check for missing addresses
         missing_addresses = df['Full_Address'].isna().sum()
         if missing_addresses > 0:
-            data_issues.append(f"⚠️ {missing_addresses} rows have missing addresses")
-        
+            data_issues.append(
+                f"⚠️ {missing_addresses} rows have missing addresses")
+
         # Check for empty addresses
         empty_addresses = (df['Full_Address'] == '').sum()
         if empty_addresses > 0:
-            data_issues.append(f"⚠️ {empty_addresses} rows have empty addresses")
-        
+            data_issues.append(
+                f"⚠️ {empty_addresses} rows have empty addresses")
+
         # Check for missing cities/states
         missing_cities = df['City'].isna().sum()
         if missing_cities > 0:
             data_issues.append(f"⚠️ {missing_cities} rows have missing cities")
-        
+
         missing_states = df['State'].isna().sum()
         if missing_states > 0:
             data_issues.append(f"⚠️ {missing_states} rows have missing states")
-        
+
         # Show data quality warnings if any
         if data_issues:
             st.warning("📊 Data Quality Issues Detected:")
             for issue in data_issues:
                 st.markdown(f"- {issue}")
-            
+
             st.info("💡 **How to fix these issues:**")
             st.markdown("""
             1. **Missing Addresses**: Fill in the Full_Address column for all rows
@@ -250,9 +251,10 @@ def process_csv_data(uploaded_file):
             - City: 'New York'
             - State: 'NY'
             """)
-            
+
             # Ask user if they want to continue
-            continue_anyway = st.checkbox("✅ Continue processing despite data issues?")
+            continue_anyway = st.checkbox(
+                "✅ Continue processing despite data issues?")
             if not continue_anyway:
                 return None
 
@@ -319,9 +321,11 @@ def generate_predictions_for_all_addresses(companies_df, model):
         if pd.isna(address) or address == '':
             address = f"Row {i+1} (No Address)"
         else:
-            address = str(address)[:50] + "..." if len(str(address)) > 50 else str(address)
-        
-        status_text.text(f"Processing address {i+1}/{len(companies_df)}: {address}")
+            address = str(address)[
+                :50] + "..." if len(str(address)) > 50 else str(address)
+
+        status_text.text(
+            f"Processing address {i+1}/{len(companies_df)}: {address}")
 
         # Check if we have real roof data for this row
         has_real_data = company.get('Has_Real_Data', False)
@@ -406,7 +410,7 @@ def main():
 
     # Model status
     st.sidebar.markdown("### 🤖 AI Model")
-    
+
     # Check if model is already loaded
     if 'trained_model' in st.session_state and st.session_state.trained_model is not None:
         st.sidebar.success("✅ Model loaded from session")
