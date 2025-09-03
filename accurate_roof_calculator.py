@@ -37,11 +37,13 @@ class AccurateRoofCalculator:
             os.getenv('ROOF_DETECTION_CONFIDENCE', 0.5))
 
         # Debug logging for API keys
-        logger.info(
-            f"Mapbox API key loaded: {'Yes' if self.mapbox_api_key else 'No'}")
+        logger.info(f"Mapbox API key loaded: {'Yes' if self.mapbox_api_key else 'No'}")
         if self.mapbox_api_key:
-            logger.info(
-                f"Mapbox API key starts with: {self.mapbox_api_key[:10]}...")
+            logger.info(f"Mapbox API key starts with: {self.mapbox_api_key[:10]}...")
+            logger.info(f"Mapbox API key length: {len(self.mapbox_api_key)}")
+        else:
+            logger.error("CRITICAL: Mapbox API key is None or empty!")
+            logger.error(f"Environment variable MAPBOX_API_KEY: {os.getenv('MAPBOX_API_KEY')}")
 
         # No fallback geocoder needed - using Mapbox only
 
@@ -58,6 +60,7 @@ class AccurateRoofCalculator:
         # Check if Mapbox API key is available
         if not self.mapbox_api_key:
             logger.error("Mapbox API key not provided - cannot geocode address")
+            logger.error(f"API key value: {self.mapbox_api_key}")
             return None
 
         try:
@@ -69,11 +72,22 @@ class AccurateRoofCalculator:
                 'limit': 1
             }
             logger.info(f"Attempting to geocode with Mapbox: {address}")
+            logger.info(f"Request URL: {url}")
+            logger.info(f"Request params: {params}")
+            
             response = requests.get(url, params=params, timeout=15)
+            logger.info(f"Response status code: {response.status_code}")
+            
+            if response.status_code != 200:
+                logger.error(f"HTTP Error {response.status_code}: {response.text}")
+                return None
+                
             response.raise_for_status()
 
             data = response.json()
-            if data['features']:
+            logger.info(f"Response data: {data}")
+            
+            if data.get('features'):
                 coords = data['features'][0]['center']
                 # Mapbox returns [lng, lat]
                 lng, lat = coords[0], coords[1]
@@ -81,6 +95,7 @@ class AccurateRoofCalculator:
                 return (lat, lng)
             else:
                 logger.warning(f"No results found for address: {address}")
+                logger.warning(f"Response data: {data}")
                 return None
         except requests.exceptions.RequestException as e:
             logger.error(f"Mapbox geocoding request failed for {address}: {e}")
