@@ -450,7 +450,8 @@ def main():
                                     '<div class="metric-container">', unsafe_allow_html=True)
                                 successful = len(
                                     results_df[results_df['Status'] == 'Success'])
-                                st.metric("Successful Calculations", successful)
+                                st.metric(
+                                    "Successful Calculations", successful)
                                 st.markdown('</div>', unsafe_allow_html=True)
 
                             with col3:
@@ -462,7 +463,8 @@ def main():
                                     st.metric("Average Roof Area (sq ft)",
                                               f"{avg_area:,.0f}")
                                 else:
-                                    st.metric("Average Roof Area (sq ft)", "N/A")
+                                    st.metric(
+                                        "Average Roof Area (sq ft)", "N/A")
                                 st.markdown('</div>', unsafe_allow_html=True)
 
                             with col4:
@@ -488,7 +490,8 @@ def main():
                                 with col1:
                                     existing_count = data_sources.get(
                                         'Existing CSV Data', 0)
-                                    st.metric("📋 Existing Data", existing_count)
+                                    st.metric("📋 Existing Data",
+                                              existing_count)
 
                                 with col2:
                                     satellite_count = data_sources.get(
@@ -511,7 +514,8 @@ def main():
                                 col1, col2, col3, col4 = st.columns(4)
 
                                 with col1:
-                                    high_conf = len(conf_data[conf_data >= 0.8])
+                                    high_conf = len(
+                                        conf_data[conf_data >= 0.8])
                                     st.metric(
                                         "🟢 High Confidence (≥0.8)", high_conf)
 
@@ -528,7 +532,8 @@ def main():
                                         "🟠 Low Confidence (0.2-0.5)", low_conf)
 
                                 with col4:
-                                    very_low_conf = len(conf_data[conf_data < 0.2])
+                                    very_low_conf = len(
+                                        conf_data[conf_data < 0.2])
                                     st.metric(
                                         "🔴 Very Low Confidence (<0.2)", very_low_conf)
 
@@ -542,7 +547,8 @@ def main():
                                 col for col in display_columns if col in results_df.columns]
 
                             if available_columns:
-                                display_df = results_df[available_columns].copy()
+                                display_df = results_df[available_columns].copy(
+                                )
 
                                 # Format the Roof_Area_SqFt column
                                 if 'Roof_Area_SqFt' in display_df.columns:
@@ -588,7 +594,7 @@ def main():
                                 st.markdown("""
                                 **Confidence Legend:**
                                 - 🟢 High (0.8-1.0): Very reliable
-                                - 🟡 Medium (0.5-0.8): Good reliability  
+                                - 🟡 Medium (0.5-0.8): Good reliability
                                 - 🟠 Low (0.2-0.5): Moderate reliability
                                 - 🔴 Very Low (0.0-0.2): Low reliability
                                 """)
@@ -643,9 +649,9 @@ def main():
                                 """, unsafe_allow_html=True)
 
                             st.markdown('</div>', unsafe_allow_html=True)
-                            else:
-                                st.warning(
-                                    "⚠️ No results generated. Please check the console for error messages.")
+                        else:
+                            st.warning(
+                                "⚠️ No results generated. Please check the console for error messages.")
 
                         except Exception as e:
                             st.error(f"❌ Error calculating roof areas: {str(e)}")
