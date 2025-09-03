@@ -12,8 +12,7 @@ from PIL import Image
 import io
 import json
 from typing import Tuple, Optional, Dict, Any
-from geopy.geocoders import Nominatim
-from geopy.exc import GeocoderTimedOut, GeocoderServiceError
+# Removed Nominatim imports - using Mapbox only
 import logging
 from dotenv import load_dotenv
 
@@ -44,12 +43,11 @@ class AccurateRoofCalculator:
             logger.info(
                 f"Mapbox API key starts with: {self.mapbox_api_key[:10]}...")
 
-        # Initialize geocoder (Nominatim as fallback only)
-        self.geolocator = Nominatim(user_agent="roof_calculator")
+        # No fallback geocoder needed - using Mapbox only
 
     def geocode_address(self, address: str) -> Optional[Tuple[float, float]]:
         """
-        Convert address to latitude and longitude coordinates using Mapbox
+        Convert address to latitude and longitude coordinates using Mapbox only
 
         Args:
             address: Full address string
@@ -57,41 +55,38 @@ class AccurateRoofCalculator:
         Returns:
             Tuple of (latitude, longitude) or None if geocoding fails
         """
-        # Try Mapbox geocoding first if API key is available
-        if self.mapbox_api_key:
-            try:
-                import requests
-                url = "https://api.mapbox.com/geocoding/v5/mapbox.places"
-                params = {
-                    'access_token': self.mapbox_api_key,
-                    'query': address,
-                    'limit': 1
-                }
-                response = requests.get(url, params=params, timeout=10)
-                response.raise_for_status()
+        # Check if Mapbox API key is available
+        if not self.mapbox_api_key:
+            logger.error("Mapbox API key not provided - cannot geocode address")
+            return None
 
-                data = response.json()
-                if data['features']:
-                    coords = data['features'][0]['center']
-                    # Mapbox returns [lng, lat]
-                    lng, lat = coords[0], coords[1]
-                    logger.info(
-                        f"Successfully geocoded with Mapbox: {address}")
-                    return (lat, lng)
-            except Exception as e:
-                logger.warning(f"Mapbox geocoding failed: {e}")
-
-        # Fallback to Nominatim (free service)
         try:
-            location = self.geolocator.geocode(address, timeout=10)
-            if location:
-                logger.info(f"Successfully geocoded with Nominatim: {address}")
-                return (location.latitude, location.longitude)
+            import requests
+            url = "https://api.mapbox.com/geocoding/v5/mapbox.places"
+            params = {
+                'access_token': self.mapbox_api_key,
+                'query': address,
+                'limit': 1
+            }
+            logger.info(f"Attempting to geocode with Mapbox: {address}")
+            response = requests.get(url, params=params, timeout=15)
+            response.raise_for_status()
+
+            data = response.json()
+            if data['features']:
+                coords = data['features'][0]['center']
+                # Mapbox returns [lng, lat]
+                lng, lat = coords[0], coords[1]
+                logger.info(f"Successfully geocoded with Mapbox: {address} -> ({lat}, {lng})")
+                return (lat, lng)
             else:
-                logger.warning(f"Could not geocode address: {address}")
+                logger.warning(f"No results found for address: {address}")
                 return None
-        except (GeocoderTimedOut, GeocoderServiceError) as e:
-            logger.error(f"Geocoding error for {address}: {e}")
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Mapbox geocoding request failed for {address}: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error during Mapbox geocoding for {address}: {e}")
             return None
 
     def get_mapbox_satellite_image(self, lat: float, lon: float, zoom: int = 20) -> Optional[np.ndarray]:
