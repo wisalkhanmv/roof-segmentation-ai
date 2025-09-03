@@ -312,6 +312,7 @@ def main():
 
     # Check API keys
     api_status = {
+        'Google Maps': bool(calculator.google_api_key),
         'Mapbox': bool(calculator.mapbox_api_key)
     }
 
@@ -359,7 +360,8 @@ def main():
             <p>To use this accurate roof area calculator, you need to configure API keys for satellite imagery providers.</p>
             <p><strong>Required:</strong> At least one of the following API keys in your .env file:</p>
             <ul>
-                <li><strong>Mapbox API Key</strong> - For satellite imagery and geocoding</li>
+                <li><strong>Google Maps API Key</strong> - For satellite imagery and geocoding (recommended)</li>
+                <li><strong>Mapbox API Key</strong> - For satellite imagery and geocoding (fallback)</li>
             </ul>
             <p>See the README for instructions on obtaining these API keys.</p>
         </div>

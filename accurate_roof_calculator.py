@@ -31,25 +31,32 @@ class AccurateRoofCalculator:
 
     def __init__(self):
         self.mapbox_api_key = os.getenv('MAPBOX_API_KEY')
-        self.default_provider = 'mapbox'
+        self.google_api_key = os.getenv('GOOGLE_MAPS_API_KEY')
+        self.default_provider = 'mapbox'  # Default to Mapbox, fallback to Google
         self.image_size = int(os.getenv('IMAGE_SIZE', 512))
         self.confidence_threshold = float(
             os.getenv('ROOF_DETECTION_CONFIDENCE', 0.5))
 
         # Debug logging for API keys
         logger.info(f"Mapbox API key loaded: {'Yes' if self.mapbox_api_key else 'No'}")
+        logger.info(f"Google Maps API key loaded: {'Yes' if self.google_api_key else 'No'}")
+        
         if self.mapbox_api_key:
             logger.info(f"Mapbox API key starts with: {self.mapbox_api_key[:10]}...")
             logger.info(f"Mapbox API key length: {len(self.mapbox_api_key)}")
-        else:
-            logger.error("CRITICAL: Mapbox API key is None or empty!")
-            logger.error(f"Environment variable MAPBOX_API_KEY: {os.getenv('MAPBOX_API_KEY')}")
+        
+        if self.google_api_key:
+            logger.info(f"Google Maps API key starts with: {self.google_api_key[:10]}...")
+            logger.info(f"Google Maps API key length: {len(self.google_api_key)}")
+        
+        if not self.mapbox_api_key and not self.google_api_key:
+            logger.error("CRITICAL: No API keys provided! Need either Mapbox or Google Maps API key.")
 
         # No fallback geocoder needed - using Mapbox only
 
     def geocode_address(self, address: str) -> Optional[Tuple[float, float]]:
         """
-        Convert address to latitude and longitude coordinates using Mapbox with fallback
+        Convert address to latitude and longitude coordinates using Google Maps and Mapbox with fallback
 
         Args:
             address: Full address string
@@ -57,7 +64,25 @@ class AccurateRoofCalculator:
         Returns:
             Tuple of (latitude, longitude) or None if geocoding fails
         """
-        # Try Mapbox first if API key is available
+        # Try Google Maps first if API key is available
+        if self.google_api_key:
+            try:
+                import googlemaps
+                gmaps = googlemaps.Client(key=self.google_api_key)
+                logger.info(f"Attempting to geocode with Google Maps: {address}")
+                
+                geocode_result = gmaps.geocode(address)
+                if geocode_result:
+                    lat = geocode_result[0]['geometry']['location']['lat']
+                    lng = geocode_result[0]['geometry']['location']['lng']
+                    logger.info(f"Successfully geocoded with Google Maps: {address} -> ({lat}, {lng})")
+                    return (lat, lng)
+                else:
+                    logger.warning(f"Google Maps geocoding returned no results for: {address}")
+            except Exception as e:
+                logger.warning(f"Google Maps geocoding error: {e}")
+
+        # Try Mapbox if Google Maps failed or not available
         if self.mapbox_api_key:
             try:
                 import requests
@@ -164,28 +189,75 @@ class AccurateRoofCalculator:
             logger.error(f"Error getting Mapbox satellite image: {e}")
             return None
 
-    def get_satellite_image(self, lat: float, lon: float, provider: str = None) -> Optional[np.ndarray]:
+    def get_google_satellite_image(self, lat: float, lon: float, zoom: int = 20) -> Optional[np.ndarray]:
         """
-        Get satellite image from Mapbox API
+        Get satellite image from Google Maps Static API
 
         Args:
             lat: Latitude
             lon: Longitude
-            provider: API provider (only 'mapbox' supported)
+            zoom: Zoom level (1-20)
 
         Returns:
             Image as numpy array or None if failed
         """
-        # Only use Mapbox
-        if not self.mapbox_api_key:
-            logger.error("Mapbox API key not provided")
+        try:
+            import requests
+            
+            # Google Maps Static API URL
+            url = "https://maps.googleapis.com/maps/api/staticmap"
+            params = {
+                'center': f"{lat},{lon}",
+                'zoom': zoom,
+                'size': f"{self.image_size}x{self.image_size}",
+                'maptype': 'satellite',
+                'key': self.google_api_key
+            }
+            
+            logger.info(f"Getting Google Maps satellite image for ({lat}, {lon})")
+            response = requests.get(url, params=params, timeout=15)
+            
+            if response.status_code == 200:
+                # Convert response to image
+                image = Image.open(io.BytesIO(response.content))
+                image_array = np.array(image)
+                logger.info(f"Successfully retrieved Google Maps satellite image: {image_array.shape}")
+                return image_array
+            else:
+                logger.error(f"Google Maps API error {response.status_code}: {response.text}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error getting Google Maps satellite image: {e}")
             return None
 
-        image = self.get_mapbox_satellite_image(lat, lon)
-        if image is not None:
-            return image
+    def get_satellite_image(self, lat: float, lon: float, provider: str = None) -> Optional[np.ndarray]:
+        """
+        Get satellite image from Google Maps or Mapbox API with fallback
 
-        logger.error("Mapbox satellite image provider failed")
+        Args:
+            lat: Latitude
+            lon: Longitude
+            provider: API provider ('google', 'mapbox', or None for auto-fallback)
+
+        Returns:
+            Image as numpy array or None if failed
+        """
+        # Try Google Maps first if API key is available
+        if self.google_api_key and (provider is None or provider == 'google'):
+            image = self.get_google_satellite_image(lat, lon)
+            if image is not None:
+                return image
+            logger.warning("Google Maps satellite image failed, trying Mapbox...")
+
+        # Try Mapbox if Google Maps failed or not available
+        if self.mapbox_api_key and (provider is None or provider == 'mapbox'):
+            image = self.get_mapbox_satellite_image(lat, lon)
+            if image is not None:
+                return image
+            logger.warning("Mapbox satellite image failed")
+
+        logger.error("All satellite image providers failed")
         return None
 
     def detect_roof_areas(self, image: np.ndarray) -> Tuple[np.ndarray, float]:
