@@ -308,13 +308,29 @@ def main():
 
     # Load calculator
     with st.spinner("Loading roof calculator..."):
-        calculator = load_roof_calculator()
+        try:
+            calculator = load_roof_calculator()
+            # Debug: Check if calculator has the expected attributes
+            if not hasattr(calculator, 'google_api_key'):
+                st.warning("⚠️ Calculator missing google_api_key attribute")
+            if not hasattr(calculator, 'mapbox_api_key'):
+                st.warning("⚠️ Calculator missing mapbox_api_key attribute")
+        except Exception as e:
+            st.error(f"❌ Failed to load roof calculator: {e}")
+            st.stop()
 
-    # Check API keys
-    api_status = {
-        'Google Maps': bool(calculator.google_api_key),
-        'Mapbox': bool(calculator.mapbox_api_key)
-    }
+    # Check API keys with error handling
+    try:
+        api_status = {
+            'Google Maps': bool(getattr(calculator, 'google_api_key', None)),
+            'Mapbox': bool(getattr(calculator, 'mapbox_api_key', None))
+        }
+    except Exception as e:
+        st.error(f"❌ Error checking API keys: {e}")
+        api_status = {
+            'Google Maps': False,
+            'Mapbox': False
+        }
 
     for provider, status in api_status.items():
         if status:
