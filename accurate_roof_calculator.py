@@ -44,6 +44,7 @@ class AccurateRoofCalculator:
     def geocode_address(self, address: str) -> Optional[Tuple[float, float]]:
         """
         Convert address to latitude and longitude coordinates
+        Tries multiple geocoding services for better reliability
 
         Args:
             address: Full address string
@@ -51,9 +52,25 @@ class AccurateRoofCalculator:
         Returns:
             Tuple of (latitude, longitude) or None if geocoding fails
         """
+        # Try Google Maps geocoding first if API key is available
+        if self.google_api_key:
+            try:
+                import googlemaps
+                gmaps = googlemaps.Client(key=self.google_api_key)
+                geocode_result = gmaps.geocode(address)
+                if geocode_result:
+                    lat = geocode_result[0]['geometry']['location']['lat']
+                    lng = geocode_result[0]['geometry']['location']['lng']
+                    logger.info(f"Successfully geocoded with Google Maps: {address}")
+                    return (lat, lng)
+            except Exception as e:
+                logger.warning(f"Google Maps geocoding failed: {e}")
+        
+        # Fallback to Nominatim (free service)
         try:
             location = self.geolocator.geocode(address, timeout=10)
             if location:
+                logger.info(f"Successfully geocoded with Nominatim: {address}")
                 return (location.latitude, location.longitude)
             else:
                 logger.warning(f"Could not geocode address: {address}")
@@ -150,8 +167,6 @@ class AccurateRoofCalculator:
         except Exception as e:
             logger.error(f"Error getting Mapbox satellite image: {e}")
             return None
-
-
 
     def get_satellite_image(self, lat: float, lon: float, provider: str = None) -> Optional[np.ndarray]:
         """
