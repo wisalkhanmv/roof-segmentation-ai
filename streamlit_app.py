@@ -194,7 +194,7 @@ def calculate_roof_areas_for_addresses(calculator, companies_df, max_addresses=N
             f"Processing {i+1}/{len(companies_df)}: {name} - {city}, {state}")
 
         # Create result row
-        result_row = company.copy()
+            result_row = company.copy()
 
         # Check if we already have roof data
         has_existing_roof_data = False
@@ -312,14 +312,13 @@ def main():
 
     # Check API keys
     api_status = {
-        'Google Maps': bool(calculator.google_api_key),
         'Mapbox': bool(calculator.mapbox_api_key)
     }
 
     for provider, status in api_status.items():
         if status:
             st.sidebar.success(f"✅ {provider}")
-        else:
+    else:
             st.sidebar.warning(f"⚠️ {provider} (No API key)")
 
     if not any(api_status.values()):
@@ -360,8 +359,7 @@ def main():
             <p>To use this accurate roof area calculator, you need to configure API keys for satellite imagery providers.</p>
             <p><strong>Required:</strong> At least one of the following API keys in your .env file:</p>
             <ul>
-                <li><strong>Google Maps API Key</strong> - For Google satellite imagery</li>
-                <li><strong>Mapbox API Key</strong> - For Mapbox satellite imagery</li>
+                <li><strong>Mapbox API Key</strong> - For satellite imagery and geocoding</li>
             </ul>
             <p>See the README for instructions on obtaining these API keys.</p>
         </div>
@@ -426,13 +424,13 @@ def main():
                             calculator, companies_df, max_addresses)
 
                     if results:
-                        # Convert to DataFrame
-                        results_df = pd.DataFrame(results)
+                            # Convert to DataFrame
+                            results_df = pd.DataFrame(results)
 
-                        # Display results
-                        st.markdown('<div class="results-section">',
-                                    unsafe_allow_html=True)
-                        st.subheader(
+                            # Display results
+                            st.markdown('<div class="results-section">',
+                                        unsafe_allow_html=True)
+                            st.subheader(
                             "🎯 Results - Roof Areas from Satellite Imagery")
 
                         # Show summary metrics
@@ -450,7 +448,7 @@ def main():
                                 '<div class="metric-container">', unsafe_allow_html=True)
                             successful = len(
                                 results_df[results_df['Status'] == 'Success'])
-                            st.metric(
+                                st.metric(
                                 "Successful Calculations", successful)
                             st.markdown('</div>', unsafe_allow_html=True)
 
@@ -567,7 +565,7 @@ def main():
                                             return f"🟡 {conf:.2f}"
                                         elif conf >= 0.2:
                                             return f"🟠 {conf:.2f}"
-                                        else:
+                        else:
                                             return f"🔴 {conf:.2f}"
                                     return "N/A"
 
