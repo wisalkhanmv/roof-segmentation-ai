@@ -649,9 +649,9 @@ def main():
                                 """, unsafe_allow_html=True)
 
                             st.markdown('</div>', unsafe_allow_html=True)
-                        else:
-                            st.warning(
-                                "⚠️ No results generated. Please check the console for error messages.")
+                            else:
+                                st.warning(
+                                    "⚠️ No results generated. Please check the console for error messages.")
 
                         except Exception as e:
                             st.error(f"❌ Error calculating roof areas: {str(e)}")
