@@ -194,7 +194,7 @@ def calculate_roof_areas_for_addresses(calculator, companies_df, max_addresses=N
             f"Processing {i+1}/{len(companies_df)}: {name} - {city}, {state}")
 
         # Create result row
-            result_row = company.copy()
+        result_row = company.copy()
 
         # Check if we already have roof data
         has_existing_roof_data = False
