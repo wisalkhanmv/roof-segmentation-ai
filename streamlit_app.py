@@ -319,7 +319,7 @@ def main():
     for provider, status in api_status.items():
         if status:
             st.sidebar.success(f"✅ {provider}")
-    else:
+        else:
             st.sidebar.warning(f"⚠️ {provider} (No API key)")
 
     if not any(api_status.values()):

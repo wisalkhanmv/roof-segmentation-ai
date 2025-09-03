@@ -38,6 +38,12 @@ class AccurateRoofCalculator:
         self.confidence_threshold = float(
             os.getenv('ROOF_DETECTION_CONFIDENCE', 0.5))
 
+        # Debug logging for API keys
+        logger.info(f"Google Maps API key loaded: {'Yes' if self.google_api_key else 'No'}")
+        logger.info(f"Mapbox API key loaded: {'Yes' if self.mapbox_api_key else 'No'}")
+        if self.mapbox_api_key:
+            logger.info(f"Mapbox API key starts with: {self.mapbox_api_key[:10]}...")
+
         # Initialize geocoder
         self.geolocator = Nominatim(user_agent="roof_calculator")
 
