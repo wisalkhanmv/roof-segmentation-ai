@@ -1,7 +1,7 @@
 """
 Accurate Roof Area Calculator using Real Aerial Imagery
 This module provides methods to calculate roof area using actual satellite imagery
-from various providers like Google Maps, Mapbox, Bing Maps, etc.
+from various providers like Google Maps, Mapbox, etc.
 """
 
 import os
@@ -33,7 +33,6 @@ class AccurateRoofCalculator:
     def __init__(self):
         self.google_api_key = os.getenv('GOOGLE_MAPS_API_KEY')
         self.mapbox_api_key = os.getenv('MAPBOX_API_KEY')
-        self.bing_api_key = os.getenv('BING_MAPS_API_KEY')
         self.default_provider = os.getenv('DEFAULT_API_PROVIDER', 'google')
         self.image_size = int(os.getenv('IMAGE_SIZE', 512))
         self.confidence_threshold = float(
@@ -152,46 +151,7 @@ class AccurateRoofCalculator:
             logger.error(f"Error getting Mapbox satellite image: {e}")
             return None
 
-    def get_bing_satellite_image(self, lat: float, lon: float, zoom: int = 20) -> Optional[np.ndarray]:
-        """
-        Get satellite image from Bing Maps API
 
-        Args:
-            lat: Latitude
-            lon: Longitude
-            zoom: Zoom level
-
-        Returns:
-            Image as numpy array or None if failed
-        """
-        if not self.bing_api_key:
-            logger.error("Bing Maps API key not provided")
-            return None
-
-        try:
-            # Bing Maps REST Services API
-            url = "https://dev.virtualearth.net/REST/v1/Imagery/Map/Aerial"
-            params = {
-                'centerPoint': f"{lat},{lon}",
-                'zoomLevel': zoom,
-                'mapSize': f"{self.image_size},{self.image_size}",
-                'key': self.bing_api_key
-            }
-
-            response = requests.get(url, params=params, timeout=30)
-            response.raise_for_status()
-
-            # Convert to numpy array
-            image = Image.open(io.BytesIO(response.content))
-            image_array = np.array(image)
-
-            logger.info(
-                f"Successfully retrieved Bing satellite image for {lat}, {lon}")
-            return image_array
-
-        except Exception as e:
-            logger.error(f"Error getting Bing satellite image: {e}")
-            return None
 
     def get_satellite_image(self, lat: float, lon: float, provider: str = None) -> Optional[np.ndarray]:
         """
@@ -200,7 +160,7 @@ class AccurateRoofCalculator:
         Args:
             lat: Latitude
             lon: Longitude
-            provider: API provider ('google', 'mapbox', 'bing')
+            provider: API provider ('google', 'mapbox')
 
         Returns:
             Image as numpy array or None if all providers fail
@@ -213,8 +173,6 @@ class AccurateRoofCalculator:
             image = self.get_google_satellite_image(lat, lon)
         elif provider == 'mapbox':
             image = self.get_mapbox_satellite_image(lat, lon)
-        elif provider == 'bing':
-            image = self.get_bing_satellite_image(lat, lon)
         else:
             logger.error(f"Unknown provider: {provider}")
             return None
@@ -225,14 +183,12 @@ class AccurateRoofCalculator:
         # If the specified provider failed, try others
         logger.info(f"Provider {provider} failed, trying alternatives...")
 
-        for alt_provider in ['google', 'mapbox', 'bing']:
+        for alt_provider in ['google', 'mapbox']:
             if alt_provider != provider:
                 if alt_provider == 'google':
                     image = self.get_google_satellite_image(lat, lon)
                 elif alt_provider == 'mapbox':
                     image = self.get_mapbox_satellite_image(lat, lon)
-                elif alt_provider == 'bing':
-                    image = self.get_bing_satellite_image(lat, lon)
 
                 if image is not None:
                     logger.info(
