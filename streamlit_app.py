@@ -426,136 +426,135 @@ def main():
                             calculator, companies_df, max_addresses)
 
                     if results:
-                            # Convert to DataFrame
-                            results_df = pd.DataFrame(results)
+                        # Convert to DataFrame
+                        results_df = pd.DataFrame(results)
 
-                            # Display results
-                            st.markdown('<div class="results-section">',
-                                        unsafe_allow_html=True)
-                            st.subheader(
+                        # Display results
+                        st.markdown('<div class="results-section">',
+                                    unsafe_allow_html=True)
+                        st.subheader(
                             "🎯 Results - Roof Areas from Satellite Imagery")
 
-                            # Show summary metrics
+                        # Show summary metrics
+                        col1, col2, col3, col4 = st.columns(4)
+
+                        with col1:
+                            st.markdown(
+                                '<div class="metric-container">', unsafe_allow_html=True)
+                            st.metric("Total Addresses Processed",
+                                      len(results_df))
+                            st.markdown('</div>', unsafe_allow_html=True)
+
+                        with col2:
+                            st.markdown(
+                                '<div class="metric-container">', unsafe_allow_html=True)
+                            successful = len(
+                                results_df[results_df['Status'] == 'Success'])
+                            st.metric(
+                                "Successful Calculations", successful)
+                            st.markdown('</div>', unsafe_allow_html=True)
+
+                        with col3:
+                            st.markdown(
+                                '<div class="metric-container">', unsafe_allow_html=True)
+                            if successful > 0:
+                                avg_area = results_df[results_df['Status']
+                                                      == 'Success']['Roof_Area_SqFt'].mean()
+                                st.metric("Average Roof Area (sq ft)",
+                                          f"{avg_area:,.0f}")
+                            else:
+                                st.metric(
+                                    "Average Roof Area (sq ft)", "N/A")
+                            st.markdown('</div>', unsafe_allow_html=True)
+
+                        with col4:
+                            st.markdown(
+                                '<div class="metric-container">', unsafe_allow_html=True)
+                            if successful > 0:
+                                avg_confidence = results_df[results_df['Status'] == 'Success']['Confidence'].mean(
+                                )
+                                st.metric("Average Confidence",
+                                          f"{avg_confidence:.2f}")
+                            else:
+                                st.metric("Average Confidence", "N/A")
+                            st.markdown('</div>', unsafe_allow_html=True)
+
+                        # Add data source distribution
+                        st.subheader("📊 Data Source Distribution")
+                        if 'Data_Source' in results_df.columns:
+                            data_sources = results_df['Data_Source'].value_counts(
+                            )
+
+                            col1, col2, col3 = st.columns(3)
+
+                            with col1:
+                                existing_count = data_sources.get(
+                                    'Existing CSV Data', 0)
+                                st.metric("📋 Existing Data",
+                                          existing_count)
+
+                            with col2:
+                                satellite_count = data_sources.get(
+                                    'Satellite Imagery', 0)
+                                st.metric("🛰️ Satellite Imagery",
+                                          satellite_count)
+
+                            with col3:
+                                failed_count = data_sources.get(
+                                    'Satellite Imagery (Failed)', 0) + data_sources.get('Satellite Imagery (Error)', 0)
+                                st.metric("❌ Failed Calculations",
+                                          failed_count)
+
+                        # Add confidence distribution
+                        if successful > 0:
+                            st.subheader("📊 Confidence Distribution")
+                            conf_data = results_df[results_df['Status']
+                                                   == 'Success']['Confidence']
+
                             col1, col2, col3, col4 = st.columns(4)
 
                             with col1:
-                                st.markdown(
-                                    '<div class="metric-container">', unsafe_allow_html=True)
-                                st.metric("Total Addresses Processed",
-                                          len(results_df))
-                                st.markdown('</div>', unsafe_allow_html=True)
+                                high_conf = len(
+                                    conf_data[conf_data >= 0.8])
+                                st.metric(
+                                    "🟢 High Confidence (≥0.8)", high_conf)
 
                             with col2:
-                                st.markdown(
-                                    '<div class="metric-container">', unsafe_allow_html=True)
-                                successful = len(
-                                    results_df[results_df['Status'] == 'Success'])
+                                med_conf = len(
+                                    conf_data[(conf_data >= 0.5) & (conf_data < 0.8)])
                                 st.metric(
-                                    "Successful Calculations", successful)
-                                st.markdown('</div>', unsafe_allow_html=True)
+                                    "🟡 Medium Confidence (0.5-0.8)", med_conf)
 
                             with col3:
-                                st.markdown(
-                                    '<div class="metric-container">', unsafe_allow_html=True)
-                                if successful > 0:
-                                    avg_area = results_df[results_df['Status']
-                                                          == 'Success']['Roof_Area_SqFt'].mean()
-                                    st.metric("Average Roof Area (sq ft)",
-                                              f"{avg_area:,.0f}")
-                                else:
-                                    st.metric(
-                                        "Average Roof Area (sq ft)", "N/A")
-                                st.markdown('</div>', unsafe_allow_html=True)
+                                low_conf = len(
+                                    conf_data[(conf_data >= 0.2) & (conf_data < 0.5)])
+                                st.metric(
+                                    "🟠 Low Confidence (0.2-0.5)", low_conf)
 
                             with col4:
-                                st.markdown(
-                                    '<div class="metric-container">', unsafe_allow_html=True)
-                                if successful > 0:
-                                    avg_confidence = results_df[results_df['Status'] == 'Success']['Confidence'].mean(
-                                    )
-                                    st.metric("Average Confidence",
-                                              f"{avg_confidence:.2f}")
-                                else:
-                                    st.metric("Average Confidence", "N/A")
-                                st.markdown('</div>', unsafe_allow_html=True)
+                                very_low_conf = len(
+                                    conf_data[conf_data < 0.2])
+                                st.metric(
+                                    "🔴 Very Low Confidence (<0.2)", very_low_conf)
 
-                            # Add data source distribution
-                            st.subheader("📊 Data Source Distribution")
-                            if 'Data_Source' in results_df.columns:
-                                data_sources = results_df['Data_Source'].value_counts(
+                        # Show results table
+                        st.subheader("📊 Results Table")
+
+                        # Create display table with confidence column
+                        display_columns = [
+                            'Name', 'City', 'State', 'Roof_Area_SqFt', 'Confidence', 'Data_Source', 'Status', 'Error']
+                        available_columns = [
+                            col for col in display_columns if col in results_df.columns]
+
+                        if available_columns:
+                            display_df = results_df[available_columns].copy()
+
+                            # Format the Roof_Area_SqFt column
+                            if 'Roof_Area_SqFt' in display_df.columns:
+                                display_df['Roof_Area_SqFt'] = display_df['Roof_Area_SqFt'].apply(
+                                    lambda x: f"{float(x):,.0f}" if pd.notna(
+                                        x) and x > 0 else "N/A"
                                 )
-
-                                col1, col2, col3 = st.columns(3)
-
-                                with col1:
-                                    existing_count = data_sources.get(
-                                        'Existing CSV Data', 0)
-                                    st.metric("📋 Existing Data",
-                                              existing_count)
-
-                                with col2:
-                                    satellite_count = data_sources.get(
-                                        'Satellite Imagery', 0)
-                                    st.metric("🛰️ Satellite Imagery",
-                                              satellite_count)
-
-                                with col3:
-                                    failed_count = data_sources.get(
-                                        'Satellite Imagery (Failed)', 0) + data_sources.get('Satellite Imagery (Error)', 0)
-                                    st.metric("❌ Failed Calculations",
-                                              failed_count)
-
-                            # Add confidence distribution
-                            if successful > 0:
-                                st.subheader("📊 Confidence Distribution")
-                                conf_data = results_df[results_df['Status']
-                                                       == 'Success']['Confidence']
-
-                                col1, col2, col3, col4 = st.columns(4)
-
-                                with col1:
-                                    high_conf = len(
-                                        conf_data[conf_data >= 0.8])
-                                    st.metric(
-                                        "🟢 High Confidence (≥0.8)", high_conf)
-
-                                with col2:
-                                    med_conf = len(
-                                        conf_data[(conf_data >= 0.5) & (conf_data < 0.8)])
-                                    st.metric(
-                                        "🟡 Medium Confidence (0.5-0.8)", med_conf)
-
-                                with col3:
-                                    low_conf = len(
-                                        conf_data[(conf_data >= 0.2) & (conf_data < 0.5)])
-                                    st.metric(
-                                        "🟠 Low Confidence (0.2-0.5)", low_conf)
-
-                                with col4:
-                                    very_low_conf = len(
-                                        conf_data[conf_data < 0.2])
-                                    st.metric(
-                                        "🔴 Very Low Confidence (<0.2)", very_low_conf)
-
-                            # Show results table
-                            st.subheader("📊 Results Table")
-
-                            # Create display table with confidence column
-                            display_columns = [
-                                'Name', 'City', 'State', 'Roof_Area_SqFt', 'Confidence', 'Data_Source', 'Status', 'Error']
-                            available_columns = [
-                                col for col in display_columns if col in results_df.columns]
-
-                            if available_columns:
-                                display_df = results_df[available_columns].copy(
-                                )
-
-                                # Format the Roof_Area_SqFt column
-                                if 'Roof_Area_SqFt' in display_df.columns:
-                                    display_df['Roof_Area_SqFt'] = display_df['Roof_Area_SqFt'].apply(
-                                        lambda x: f"{float(x):,.0f}" if pd.notna(
-                                            x) and x > 0 else "N/A"
-                                    )
 
                             # Format confidence with color coding
                             if 'Confidence' in display_df.columns:
@@ -575,99 +574,99 @@ def main():
                                 display_df['Confidence'] = display_df['Confidence'].apply(
                                     format_confidence)
 
-                                # Format status with emojis
-                                if 'Status' in display_df.columns:
-                                    display_df['Status'] = display_df['Status'].apply(
-                                        lambda x: "✅ Success" if x == "Success" else "❌ Failed" if x == "Failed" else "⚠️ Error"
-                                    )
+                            # Format status with emojis
+                            if 'Status' in display_df.columns:
+                                display_df['Status'] = display_df['Status'].apply(
+                                    lambda x: "✅ Success" if x == "Success" else "❌ Failed" if x == "Failed" else "⚠️ Error"
+                                )
 
-                                # Show error messages for failed cases
-                                if 'Error' in display_df.columns:
-                                    display_df['Error'] = display_df['Error'].apply(
-                                        lambda x: str(x)[
-                                            :50] + "..." if pd.notna(x) and len(str(x)) > 50 else str(x) if pd.notna(x) else ""
-                                    )
+                            # Show error messages for failed cases
+                            if 'Error' in display_df.columns:
+                                display_df['Error'] = display_df['Error'].apply(
+                                    lambda x: str(x)[
+                                        :50] + "..." if pd.notna(x) and len(str(x)) > 50 else str(x) if pd.notna(x) else ""
+                                )
 
-                                st.table(display_df)
+                            st.table(display_df)
 
-                                # Add confidence legend
-                                st.markdown("""
-                                **Confidence Legend:**
-                                - 🟢 High (0.8-1.0): Very reliable
-                                - 🟡 Medium (0.5-0.8): Good reliability
-                                - 🟠 Low (0.2-0.5): Moderate reliability
-                                - 🔴 Very Low (0.0-0.2): Low reliability
-                                """)
+                            # Add confidence legend
+                            st.markdown("""
+                            **Confidence Legend:**
+                            - 🟢 High (0.8-1.0): Very reliable
+                            - 🟡 Medium (0.5-0.8): Good reliability
+                            - 🟠 Low (0.2-0.5): Moderate reliability
+                            - 🔴 Very Low (0.0-0.2): Low reliability
+                            """)
 
-                            # Download results
-                            csv_data = results_df.to_csv(index=False)
-                            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                        # Download results
+                        csv_data = results_df.to_csv(index=False)
+                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-                            st.download_button(
-                                label="📥 Download Complete Results CSV",
-                                data=csv_data,
-                                file_name=f"accurate_roof_areas_{timestamp}.csv",
-                                mime="text/csv"
-                            )
+                        st.download_button(
+                            label="📥 Download Complete Results CSV",
+                            data=csv_data,
+                            file_name=f"accurate_roof_areas_{timestamp}.csv",
+                            mime="text/csv"
+                        )
 
-                            # Show insights
-                            st.markdown('<div class="results-section">',
-                                        unsafe_allow_html=True)
-                            st.subheader("💡 What You Got")
+                        # Show insights
+                        st.markdown('<div class="results-section">',
+                                    unsafe_allow_html=True)
+                        st.subheader("💡 What You Got")
 
-                            # Calculate data source statistics
-                            existing_data_count = len([r for r in results_df.to_dict(
-                                'records') if r.get('Data_Source') == 'Existing CSV Data'])
-                            satellite_data_count = len([r for r in results_df.to_dict(
-                                'records') if r.get('Data_Source') == 'Satellite Imagery'])
-                            failed_count = len([r for r in results_df.to_dict('records') if r.get(
-                                'Data_Source', '').startswith('Satellite Imagery (')])
+                        # Calculate data source statistics
+                        existing_data_count = len([r for r in results_df.to_dict(
+                            'records') if r.get('Data_Source') == 'Existing CSV Data'])
+                        satellite_data_count = len([r for r in results_df.to_dict(
+                            'records') if r.get('Data_Source') == 'Satellite Imagery'])
+                        failed_count = len([r for r in results_df.to_dict('records') if r.get(
+                            'Data_Source', '').startswith('Satellite Imagery (')])
 
+                        st.markdown(f"""
+                        <div class="success-box">
+                            <h4>✅ Roof Area Analysis Complete</h4>
+                            <p><strong>Total addresses processed:</strong> {len(results_df)}</p>
+                            <p><strong>Successful calculations:</strong> {successful}</p>
+                            <p><strong>Failed calculations:</strong> {len(results_df) - successful}</p>
+                            <p><strong>Data sources:</strong></p>
+                            <ul>
+                                <li>📋 Existing CSV data: {existing_data_count} addresses</li>
+                                <li>🛰️ Satellite imagery: {satellite_data_count} addresses</li>
+                                <li>❌ Failed calculations: {failed_count} addresses</li>
+                            </ul>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                        if successful > 0:
                             st.markdown(f"""
-                            <div class="success-box">
-                                <h4>✅ Roof Area Analysis Complete</h4>
-                                <p><strong>Total addresses processed:</strong> {len(results_df)}</p>
-                                <p><strong>Successful calculations:</strong> {successful}</p>
-                                <p><strong>Failed calculations:</strong> {len(results_df) - successful}</p>
-                                <p><strong>Data sources:</strong></p>
-                                <ul>
-                                    <li>📋 Existing CSV data: {existing_data_count} addresses</li>
-                                    <li>🛰️ Satellite imagery: {satellite_data_count} addresses</li>
-                                    <li>❌ Failed calculations: {failed_count} addresses</li>
-                                </ul>
+                            <div class="info-box">
+                                <h4>📊 Analysis Results</h4>
+                                <p><strong>Average roof area:</strong> {results_df[results_df['Status'] == 'Success']['Roof_Area_SqFt'].mean():,.0f} sq ft</p>
+                                <p><strong>Average confidence:</strong> {results_df[results_df['Status'] == 'Success']['Confidence'].mean():.2f}</p>
+                                <p><strong>Total roof area:</strong> {results_df[results_df['Status'] == 'Success']['Roof_Area_SqFt'].sum():,.0f} sq ft</p>
                             </div>
                             """, unsafe_allow_html=True)
 
-                            if successful > 0:
-                                st.markdown(f"""
-                                <div class="info-box">
-                                    <h4>📊 Analysis Results</h4>
-                                    <p><strong>Average roof area:</strong> {results_df[results_df['Status'] == 'Success']['Roof_Area_SqFt'].mean():,.0f} sq ft</p>
-                                    <p><strong>Average confidence:</strong> {results_df[results_df['Status'] == 'Success']['Confidence'].mean():.2f}</p>
-                                    <p><strong>Total roof area:</strong> {results_df[results_df['Status'] == 'Success']['Roof_Area_SqFt'].sum():,.0f} sq ft</p>
-                                </div>
-                                """, unsafe_allow_html=True)
+                        st.markdown('</div>', unsafe_allow_html=True)
+                    else:
+                        st.warning(
+                            "⚠️ No results generated. Please check the console for error messages.")
 
-                            st.markdown('</div>', unsafe_allow_html=True)
-                        else:
-                            st.warning(
-                                "⚠️ No results generated. Please check the console for error messages.")
-
-                        except Exception as e:
-                            st.error(f"❌ Error calculating roof areas: {str(e)}")
-                            st.info("💡 **Common causes and solutions:**")
-                            st.markdown("""
-                            1. **API Key Issues**: Check that your API keys are valid and have sufficient quota
-                            2. **Network Issues**: Ensure you have a stable internet connection
-                            3. **Address Format**: Make sure addresses are properly formatted
-                            4. **Rate Limiting**: Try reducing the number of addresses or adding delays
-                            
-                            **What to do:**
-                            - Check your API keys in the .env file
-                            - Verify your internet connection
-                            - Try with a smaller number of addresses first
-                            - Check the console for detailed error messages
-                            """)
+                except Exception as e:
+                    st.error(f"❌ Error calculating roof areas: {str(e)}")
+                    st.info("💡 **Common causes and solutions:**")
+                    st.markdown("""
+                    1. **API Key Issues**: Check that your API keys are valid and have sufficient quota
+                    2. **Network Issues**: Ensure you have a stable internet connection
+                    3. **Address Format**: Make sure addresses are properly formatted
+                    4. **Rate Limiting**: Try reducing the number of addresses or adding delays
+                    
+                    **What to do:**
+                    - Check your API keys in the .env file
+                    - Verify your internet connection
+                    - Try with a smaller number of addresses first
+                    - Check the console for detailed error messages
+                    """)
 
     # Footer
     st.markdown("---")
