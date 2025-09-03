@@ -49,7 +49,7 @@ class AccurateRoofCalculator:
 
     def geocode_address(self, address: str) -> Optional[Tuple[float, float]]:
         """
-        Convert address to latitude and longitude coordinates using Mapbox only
+        Convert address to latitude and longitude coordinates using Mapbox with fallback
 
         Args:
             address: Full address string
@@ -57,51 +57,64 @@ class AccurateRoofCalculator:
         Returns:
             Tuple of (latitude, longitude) or None if geocoding fails
         """
-        # Check if Mapbox API key is available
-        if not self.mapbox_api_key:
-            logger.error("Mapbox API key not provided - cannot geocode address")
-            logger.error(f"API key value: {self.mapbox_api_key}")
-            return None
+        # Try Mapbox first if API key is available
+        if self.mapbox_api_key:
+            try:
+                import requests
+                url = "https://api.mapbox.com/geocoding/v5/mapbox.places"
+                params = {
+                    'access_token': self.mapbox_api_key,
+                    'query': address,
+                    'limit': 1
+                }
+                logger.info(f"Attempting to geocode with Mapbox: {address}")
+                
+                response = requests.get(url, params=params, timeout=15)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    if data.get('features'):
+                        coords = data['features'][0]['center']
+                        # Mapbox returns [lng, lat]
+                        lng, lat = coords[0], coords[1]
+                        logger.info(f"Successfully geocoded with Mapbox: {address} -> ({lat}, {lng})")
+                        return (lat, lng)
+                else:
+                    logger.warning(f"Mapbox geocoding failed with status {response.status_code}: {response.text}")
+            except Exception as e:
+                logger.warning(f"Mapbox geocoding error: {e}")
 
+        # Fallback: Use a simple geocoding service (free, no API key required)
         try:
             import requests
-            url = "https://api.mapbox.com/geocoding/v5/mapbox.places"
+            # Using a free geocoding service as fallback
+            url = "https://nominatim.openstreetmap.org/search"
             params = {
-                'access_token': self.mapbox_api_key,
-                'query': address,
-                'limit': 1
+                'q': address,
+                'format': 'json',
+                'limit': 1,
+                'addressdetails': 1
             }
-            logger.info(f"Attempting to geocode with Mapbox: {address}")
-            logger.info(f"Request URL: {url}")
-            logger.info(f"Request params: {params}")
+            headers = {
+                'User-Agent': 'RoofCalculator/1.0'
+            }
             
-            response = requests.get(url, params=params, timeout=15)
-            logger.info(f"Response status code: {response.status_code}")
+            logger.info(f"Attempting fallback geocoding for: {address}")
+            response = requests.get(url, params=params, headers=headers, timeout=10)
             
-            if response.status_code != 200:
-                logger.error(f"HTTP Error {response.status_code}: {response.text}")
-                return None
-                
-            response.raise_for_status()
-
-            data = response.json()
-            logger.info(f"Response data: {data}")
+            if response.status_code == 200:
+                data = response.json()
+                if data:
+                    lat = float(data[0]['lat'])
+                    lon = float(data[0]['lon'])
+                    logger.info(f"Successfully geocoded with fallback: {address} -> ({lat}, {lon})")
+                    return (lat, lon)
             
-            if data.get('features'):
-                coords = data['features'][0]['center']
-                # Mapbox returns [lng, lat]
-                lng, lat = coords[0], coords[1]
-                logger.info(f"Successfully geocoded with Mapbox: {address} -> ({lat}, {lng})")
-                return (lat, lng)
-            else:
-                logger.warning(f"No results found for address: {address}")
-                logger.warning(f"Response data: {data}")
-                return None
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Mapbox geocoding request failed for {address}: {e}")
+            logger.warning(f"Fallback geocoding failed for: {address}")
             return None
+            
         except Exception as e:
-            logger.error(f"Unexpected error during Mapbox geocoding for {address}: {e}")
+            logger.error(f"All geocoding methods failed for {address}: {e}")
             return None
 
     def get_mapbox_satellite_image(self, lat: float, lon: float, zoom: int = 20) -> Optional[np.ndarray]:
