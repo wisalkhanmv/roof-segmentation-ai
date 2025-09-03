@@ -38,9 +38,11 @@ class AccurateRoofCalculator:
             os.getenv('ROOF_DETECTION_CONFIDENCE', 0.5))
 
         # Debug logging for API keys
-        logger.info(f"Mapbox API key loaded: {'Yes' if self.mapbox_api_key else 'No'}")
+        logger.info(
+            f"Mapbox API key loaded: {'Yes' if self.mapbox_api_key else 'No'}")
         if self.mapbox_api_key:
-            logger.info(f"Mapbox API key starts with: {self.mapbox_api_key[:10]}...")
+            logger.info(
+                f"Mapbox API key starts with: {self.mapbox_api_key[:10]}...")
 
         # Initialize geocoder (Nominatim as fallback only)
         self.geolocator = Nominatim(user_agent="roof_calculator")
@@ -67,16 +69,18 @@ class AccurateRoofCalculator:
                 }
                 response = requests.get(url, params=params, timeout=10)
                 response.raise_for_status()
-                
+
                 data = response.json()
                 if data['features']:
                     coords = data['features'][0]['center']
-                    lng, lat = coords[0], coords[1]  # Mapbox returns [lng, lat]
-                    logger.info(f"Successfully geocoded with Mapbox: {address}")
+                    # Mapbox returns [lng, lat]
+                    lng, lat = coords[0], coords[1]
+                    logger.info(
+                        f"Successfully geocoded with Mapbox: {address}")
                     return (lat, lng)
             except Exception as e:
                 logger.warning(f"Mapbox geocoding failed: {e}")
-        
+
         # Fallback to Nominatim (free service)
         try:
             location = self.geolocator.geocode(address, timeout=10)
@@ -89,8 +93,6 @@ class AccurateRoofCalculator:
         except (GeocoderTimedOut, GeocoderServiceError) as e:
             logger.error(f"Geocoding error for {address}: {e}")
             return None
-
-
 
     def get_mapbox_satellite_image(self, lat: float, lon: float, zoom: int = 20) -> Optional[np.ndarray]:
         """

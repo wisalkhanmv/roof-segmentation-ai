@@ -194,7 +194,7 @@ def calculate_roof_areas_for_addresses(calculator, companies_df, max_addresses=N
             f"Processing {i+1}/{len(companies_df)}: {name} - {city}, {state}")
 
         # Create result row
-            result_row = company.copy()
+        result_row = company.copy()
 
         # Check if we already have roof data
         has_existing_roof_data = False
@@ -535,7 +535,7 @@ def main():
                                     st.metric(
                                         "🔴 Very Low Confidence (<0.2)", very_low_conf)
 
-                            # Show results table
+                        # Show results table
                             st.subheader("📊 Results Table")
 
                             # Create display table with confidence column
@@ -565,7 +565,7 @@ def main():
                                                 return f"🟡 {conf:.2f}"
                                             elif conf >= 0.2:
                                                 return f"🟠 {conf:.2f}"
-                                            else:
+                        else:
                                                 return f"🔴 {conf:.2f}"
                                         return "N/A"
 
@@ -596,21 +596,21 @@ def main():
                                 - 🔴 Very Low (0.0-0.2): Low reliability
                                 """)
 
-                            # Download results
-                            csv_data = results_df.to_csv(index=False)
-                            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                        # Download results
+                        csv_data = results_df.to_csv(index=False)
+                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-                            st.download_button(
+                        st.download_button(
                                 label="📥 Download Complete Results CSV",
-                                data=csv_data,
+                            data=csv_data,
                                 file_name=f"accurate_roof_areas_{timestamp}.csv",
                                 mime="text/csv"
                             )
 
                             # Show insights
-                            st.markdown('<div class="results-section">',
-                                        unsafe_allow_html=True)
-                            st.subheader("💡 What You Got")
+                        st.markdown('<div class="results-section">',
+                                    unsafe_allow_html=True)
+                        st.subheader("💡 What You Got")
 
                             # Calculate data source statistics
                             existing_data_count = len([r for r in results_df.to_dict(
@@ -620,8 +620,8 @@ def main():
                             failed_count = len([r for r in results_df.to_dict('records') if r.get(
                                 'Data_Source', '').startswith('Satellite Imagery (')])
 
-                            st.markdown(f"""
-                            <div class="success-box">
+                        st.markdown(f"""
+                        <div class="success-box">
                                 <h4>✅ Roof Area Analysis Complete</h4>
                                 <p><strong>Total addresses processed:</strong> {len(results_df)}</p>
                                 <p><strong>Successful calculations:</strong> {successful}</p>
@@ -630,40 +630,40 @@ def main():
                                     <li>📋 Existing CSV data: {existing_data_count} addresses</li>
                                     <li>🛰️ Satellite imagery: {satellite_data_count} addresses</li>
                                     <li>❌ Failed calculations: {failed_count} addresses</li>
-                                </ul>
-                            </div>
-                            """, unsafe_allow_html=True)
+                            </ul>
+                        </div>
+                        """, unsafe_allow_html=True)
 
                             if successful > 0:
-                                st.markdown(f"""
-                                <div class="info-box">
+                            st.markdown(f"""
+                            <div class="info-box">
                                     <h4>📊 Analysis Results</h4>
                                     <p><strong>Average roof area:</strong> {results_df[results_df['Status'] == 'Success']['Roof_Area_SqFt'].mean():,.0f} sq ft</p>
                                     <p><strong>Average confidence:</strong> {results_df[results_df['Status'] == 'Success']['Confidence'].mean():.2f}</p>
                                     <p><strong>Total roof area:</strong> {results_df[results_df['Status'] == 'Success']['Roof_Area_SqFt'].sum():,.0f} sq ft</p>
-                                </div>
-                                """, unsafe_allow_html=True)
+                            </div>
+                            """, unsafe_allow_html=True)
 
-                            st.markdown('</div>', unsafe_allow_html=True)
-                        else:
-                            st.warning(
-                                "⚠️ No results generated. Please check the console for error messages.")
+                        st.markdown('</div>', unsafe_allow_html=True)
+                    else:
+                        st.warning(
+                            "⚠️ No results generated. Please check the console for error messages.")
 
-                    except Exception as e:
+                except Exception as e:
                         st.error(f"❌ Error calculating roof areas: {str(e)}")
-                        st.info("💡 **Common causes and solutions:**")
-                        st.markdown("""
+                    st.info("💡 **Common causes and solutions:**")
+                    st.markdown("""
                         1. **API Key Issues**: Check that your API keys are valid and have sufficient quota
                         2. **Network Issues**: Ensure you have a stable internet connection
                         3. **Address Format**: Make sure addresses are properly formatted
                         4. **Rate Limiting**: Try reducing the number of addresses or adding delays
-                        
-                        **What to do:**
+                    
+                    **What to do:**
                         - Check your API keys in the .env file
                         - Verify your internet connection
                         - Try with a smaller number of addresses first
                         - Check the console for detailed error messages
-                        """)
+                    """)
 
     # Footer
     st.markdown("---")
